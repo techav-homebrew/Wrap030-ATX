@@ -155,8 +155,10 @@ always_comb begin
 end
 
 // primary timing state machine
-always @(posedge sysClk or posedge nAS) begin
-    if(nAS) begin
+always @(posedge sysClk or posedge nAS or negedge nReset) begin
+    if(!nReset) begin
+        memOverlay <= 0;            // 0 on reset; 1 enables read RAM page 0
+    end else if(nAS) begin
         timingState <= S0;
         nRamCEinternal <= 1;
         nRomCEinternal <= 1;
@@ -165,7 +167,7 @@ always @(posedge sysClk or posedge nAS) begin
         nDSACKinternal <= 1;
         nSTERMinternal <= 1;
         nBERRinternal <= 1;
-        memOverlay <= 0;         // 0 on reset; 1 enables read RAM page 0
+        // memOverlay <= 0;         // 0 on reset; 1 enables read RAM page 0
     end else begin
         case(timingState)
             S0 : begin
