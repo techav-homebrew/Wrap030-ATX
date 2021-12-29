@@ -26,10 +26,10 @@ JP1,,2X20-SHROUDED,Primary expansion header (Address/Data)
 JP2,,2X10-SHROUDED,Secondary expansion header (Control)
 JP3,,2X20-SHROUDED,Tertiary expansion header (32-bit Data)
 JP5,,2.1MM,Barrel jack power (optional)
-RAM-HH,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 31-24
-RAM-HM,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 23-16
-RAM-LL,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 15-8
-RAM-LM,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 7-0
+RAM-HH,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM ï¿½ Data bits 31-24
+RAM-HM,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM ï¿½ Data bits 23-16
+RAM-LL,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM ï¿½ Data bits 15-8
+RAM-LM,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM ï¿½ Data bits 7-0
 RN1,10k,RN-10,SIP Resistor network (Pull up value not critical)
 RN2,10k,RN-10,SIP Resistor network (Pull up value not critical)
 ROM,AM29F040P,DIL32-3,518kx8 Flash ROM
