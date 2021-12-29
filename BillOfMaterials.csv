@@ -1,0 +1,37 @@
+Part,Value,Package,Description
+ACIA,MC68B50,DIL24,UART
+ACIA-CLK,6.144MHz,DIL08S,Serial clock
+C1,0.1uF,C025-024X044,MAX232 C1
+C2,0.1uF,C025-024X044,MAX232 C2
+C3,0.1uF,C025-024X044,MAX232 V+
+C4,0.1uF,C025-024X044,Decoupling capacitor
+C5,0.1uF,C025-024X044,Decoupling capacitor
+C6,0.1uF,C025-024X044,Decoupling capacitor
+C7,0.1uF,C025-024X044,Decoupling capacitor
+C8,0.1uF,C025-024X044,Decoupling capacitor
+C9,0.1uF,C025-024X044,MAX232 V-
+C10,0.1uF,C025-024X044,Decoupling capacitor
+C11,0.1uF,C025-024X044,Decoupling capacitor
+C12,0.1uF,C025-024X044,Decoupling capacitor
+C13,0.1uF,C025-024X044,Decoupling capacitor
+C14,100uF,"E3,5-8",Electrolytic reservoir capacitor
+COM,,2X5-SHROUDED,Standard 
+CPU,MC68030,PGA-128,Motorola 68030 CPU
+GLU,ATF1504AS,PLCC-44,Glue logic CPLD (Altera EPM7064S or Atmel ATF1504AS)
+IC1,74LS688N,DIL20,ACIA Interrupt Acknowledge (optional)
+IC2,74LS192N,DIL16,Serial clock divider
+IC3,74LS07N,DIL14,ACIA Interrupt Acknowledge buffer (optional)
+J1,,,AMP 4-pin disk drive power (optional)
+JP1,,2X20-SHROUDED,Primary expansion header (Address/Data)
+JP2,,2X10-SHROUDED,Secondary expansion header (Control)
+JP3,,2X20-SHROUDED,Tertiary expansion header (32-bit Data)
+JP5,,2.1MM,Barrel jack power (optional)
+RAM-HH,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 31-24
+RAM-HM,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 23-16
+RAM-LL,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 15-8
+RAM-LM,AS6C4008P,DIL32-3,128kx8 or 512kx8 SRAM – Data bits 7-0
+RN1,10k,RN-10,SIP Resistor network (Pull up value not critical)
+RN2,10k,RN-10,SIP Resistor network (Pull up value not critical)
+ROM,AM29F040P,DIL32-3,518kx8 Flash ROM
+SYS-CLK,12MHz,DIL08S,"Primary system clock, divided by 2 for CPU"
+U1,MAX232P,DIL16,RS-232 Level shifter

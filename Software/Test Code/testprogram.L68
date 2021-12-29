@@ -1,0 +1,583 @@
+00201000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.15.04
+Created On: 12/29/2021 12:36:24 AM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Wrap030 Initial Test Program
+00000000                             3  * Written by : techav
+00000000                             4  * Date       : 2021/12/27
+00000000                             5  * Description: Performs initial tests to confirm hardware
+00000000                             6  *            : is operating as expected.
+00000000                             7  *-----------------------------------------------------------
+00000000                             8  
+00000000  =00200000                  9  romBot      equ     $00200000
+00000000  =00000000                 10  ramBot      equ     $00000000
+00000000  =00080000                 11  ramPage1    equ     ramBot+$80000
+00000000  =001FFFFF                 12  ramTop      equ     ramBot+$1FFFFF
+00000000  =00200000                 13  stackInit   equ     ramTop+1
+00000000                            14  
+00000000  =00380000                 15  aciaCom     equ     $00380000
+00000000  =00380004                 16  aciaDat     equ     aciaCom+4
+00000000  =00000016                 17  aciaSet     equ     $16
+00000000                            18  
+00000000  =00300000                 19  overlayPort equ     $00300000
+00000000                            20  
+00200000                            21              ORG     romBot
+00200000                            22  
+00200000                            23  ; macros
+00200000                            24  prntChr     MACRO
+00200000                            25              eor.l   D1,D1                   ; clear loop counter
+00200000                            26  chrLp\@
+00200000                            27              btst    #1,aciaCom              ; check if ACIA Tx register is empty
+00200000                            28              ;beq.s  chrLp\@                 ; loop until empty
+00200000                            29              bne.s   chrOut\@                ; if empty, skip ahead and output byte
+00200000                            30              addq.l  #1,D1                   ; increment loop counter
+00200000                            31              cmp.l   #1000,D1                ; limit 1000 loops
+00200000                            32              bne.s   chrLp\@                 ; if not at limit, then continue loop
+00200000                            33  chrOut\@
+00200000                            34              move.b  D0,aciaDat              ; output character to ACIA
+00200000                            35              ENDM
+00200000                            36  
+00200000                            37  prntStr     MACRO
+00200000                            38  prntLp\@
+00200000                            39              move.b  (A1)+,D0                ; get next byte of string
+00200000                            40              cmp.b   #0,D0                   ; check for null terminator
+00200000                            41              beq.s   prntDn\@                ; if null, exit print loop
+00200000                            42              prntChr ; call print character macro
+00200000                            43              bra.s   prntLp\@                ; continue loop and print next character
+00200000                            44  prntDn\@
+00200000                            45              nop     ; end macro
+00200000                            46              ENDM
+00200000                            47  
+00200000                            48  prntFail    MACRO
+00200000                            49              lea     strFailed,A1            ; load failure string
+00200000                            50              prntStr
+00200000                            51              nop
+00200000                            52              ENDM
+00200000                            53  
+00200000                            54  ; vector table
+00200000                            55              ORG    romBot
+00200000                            56  VECTOR:
+00200000                            57              ;dc.l   START                   ; initial PC
+00200000                            58              ;dc.l   stackInit               ; initial SP
+00200000= 00200000                  59              dc.l    stackInit               ; initial SP
+00200004= 00201000                  60              dc.l    START                   ; initial PC
+00200008= 00201312 00201312 ...     61              dcb.l   254,intHndlr            ; initial vector handler
+00200400                            62  
+00200400                            63  ; this is where the program actually starts 
+00201000                            64              ORG romBot+$1000
+00201000                            65  START:      ; first instruction of program
+00201000  2E7C 00200000             66              move.l  #stackInit,SP           ; initialize stack pointer
+00201006                            67              ;lea    aciaCom,A0              ; get ACIA address
+00201006                            68              ;move.b #$03,(A0)               ; soft reset ACIA
+00201006  13FC 0003 00380000        69              move.b  #$03,aciaCom
+0020100E  4E71                      70              nop     ; and wait before configuring
+00201010  4E71                      71              nop
+00201012  4E71                      72              nop
+00201014  4E71                      73              nop
+00201016                            74              ;move.b #aciaSet,(A0)           ; configure ACIA
+00201016  13FC 0016 00380000        75              move.b  #aciaSet,aciaCom
+0020101E  4E71                      76              nop
+00201020  4E71                      77              nop
+00201022  4E71                      78              nop
+00201024  4E71                      79              nop
+00201026  13FC 0020 00380004        80              move.b  #$20,aciaDat            ; just a test.
+0020102E  43FA 0314                 81              lea     strAciaInit(PC),A1      ; get address of ACIA init string
+00201032                            82m             prntStr
+00201032                            83m PRNTLP_1
+00201032  1019                      84m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+00201034  B03C 0000                 85m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+00201038  671E                      86m             BEQ.S   PRNTDN_1                ; IF NULL, EXIT PRINT LOOP
+0020103A                            87mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+0020103A  B381                      88mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+0020103C                            89mm CHRLP_2
+0020103C  0839 0001 00380000        90mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+00201044                            91mm             ;BEQ.S  CHRLP_2                 ; LOOP UNTIL EMPTY
+00201044  660A                      92mm             BNE.S   CHROUT_2                ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+00201046  5281                      93mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+00201048  B2BC 000003E8             94mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+0020104E  66EC                      95mm             BNE.S   CHRLP_2                 ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+00201050                            96mm CHROUT_2
+00201050  13C0 00380004             97mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+00201056                            98mm             ENDM
+00201056  60DA                      99m             BRA.S   PRNTLP_1                ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+00201058                           100m PRNTDN_1
+00201058  4E71                     101m             NOP     ; END MACRO
+0020105A                           102m             ENDM
+0020105A                           103  
+0020105A                           104  ClearOverlay:
+0020105A  23FC 00000000 00300000   105              move.l  #0,overlayPort          ; disable startup overlay
+00201064  43FA 02F6                106              lea     strOverlay(PC),A1       ; get confirmation string
+00201068                           107m             prntStr
+00201068                           108m PRNTLP_3
+00201068  1019                     109m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+0020106A  B03C 0000                110m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+0020106E  671E                     111m             BEQ.S   PRNTDN_3                ; IF NULL, EXIT PRINT LOOP
+00201070                           112mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+00201070  B381                     113mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+00201072                           114mm CHRLP_4
+00201072  0839 0001 00380000       115mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+0020107A                           116mm             ;BEQ.S  CHRLP_4                 ; LOOP UNTIL EMPTY
+0020107A  660A                     117mm             BNE.S   CHROUT_4                ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+0020107C  5281                     118mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+0020107E  B2BC 000003E8            119mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+00201084  66EC                     120mm             BNE.S   CHRLP_4                 ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+00201086                           121mm CHROUT_4
+00201086  13C0 00380004            122mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+0020108C                           123mm             ENDM
+0020108C  60DA                     124m             BRA.S   PRNTLP_3                ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+0020108E                           125m PRNTDN_3
+0020108E  4E71                     126m             NOP     ; END MACRO
+00201090                           127m             ENDM
+00201090                           128  
+00201090                           129  ramTest1:
+00201090  203C A5A5A5A5            130              move.l  #$A5A5A5A5,D0           ; check if overlay is properly disabled
+00201096  21C0 0000                131              move.l  D0,ramBot               ; by writing pattern to RAM page 0
+0020109A  2238 0000                132              move.l  ramBot,D1               ; and checking if it matches
+0020109E  B081                     133              cmp.l   D1,D0                   ; 
+002010A0  6600 0034                134              bne     ramTest1err1            ; error if no match
+002010A4  43F9 00201388            135              lea     strSuccess,A1
+002010AA                           136m             prntStr
+002010AA                           137m PRNTLP_5
+002010AA  1019                     138m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+002010AC  B03C 0000                139m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+002010B0  671E                     140m             BEQ.S   PRNTDN_5                ; IF NULL, EXIT PRINT LOOP
+002010B2                           141mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+002010B2  B381                     142mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+002010B4                           143mm CHRLP_6
+002010B4  0839 0001 00380000       144mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+002010BC                           145mm             ;BEQ.S  CHRLP_6                 ; LOOP UNTIL EMPTY
+002010BC  660A                     146mm             BNE.S   CHROUT_6                ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+002010BE  5281                     147mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+002010C0  B2BC 000003E8            148mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+002010C6  66EC                     149mm             BNE.S   CHRLP_6                 ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+002010C8                           150mm CHROUT_6
+002010C8  13C0 00380004            151mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+002010CE                           152mm             ENDM
+002010CE  60DA                     153m             BRA.S   PRNTLP_5                ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+002010D0                           154m PRNTDN_5
+002010D0  4E71                     155m             NOP     ; END MACRO
+002010D2                           156m             ENDM
+002010D2  6000 0036                157              bra     ramTest2                ; move on to next test
+002010D6                           158  ramTest1err1:
+002010D6                           159m             prntFail
+002010D6  43F9 0020137F            160m             LEA     STRFAILED,A1            ; LOAD FAILURE STRING
+002010DC                           161mm             PRNTSTR
+002010DC                           162mm PRNTLP_8
+002010DC  1019                     163mm             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+002010DE  B03C 0000                164mm             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+002010E2  671E                     165mm             BEQ.S   PRNTDN_8                ; IF NULL, EXIT PRINT LOOP
+002010E4                           166mmm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+002010E4  B381                     167mmm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+002010E6                           168mmm CHRLP_9
+002010E6  0839 0001 00380000       169mmm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+002010EE                           170mmm             ;BEQ.S  CHRLP_9                 ; LOOP UNTIL EMPTY
+002010EE  660A                     171mmm             BNE.S   CHROUT_9                ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+002010F0  5281                     172mmm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+002010F2  B2BC 000003E8            173mmm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+002010F8  66EC                     174mmm             BNE.S   CHRLP_9                 ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+002010FA                           175mmm CHROUT_9
+002010FA  13C0 00380004            176mmm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+00201100                           177mmm             ENDM
+00201100  60DA                     178mm             BRA.S   PRNTLP_8                ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+00201102                           179mm PRNTDN_8
+00201102  4E71                     180mm             NOP     ; END MACRO
+00201104                           181mm             ENDM
+00201104  4E71                     182m             NOP
+00201106                           183m             ENDM
+00201106  6000 0002                184              bra     ramTest2                ; move on to next test
+0020110A                           185  
+0020110A                           186  ramTest2:
+0020110A  43FA 0286                187              lea     strDatBusTst(PC),A1     ;
+0020110E                           188m             prntStr
+0020110E                           189m PRNTLP_10
+0020110E  1019                     190m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+00201110  B03C 0000                191m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+00201114  671E                     192m             BEQ.S   PRNTDN_10               ; IF NULL, EXIT PRINT LOOP
+00201116                           193mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+00201116  B381                     194mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+00201118                           195mm CHRLP_11
+00201118  0839 0001 00380000       196mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+00201120                           197mm             ;BEQ.S  CHRLP_11                ; LOOP UNTIL EMPTY
+00201120  660A                     198mm             BNE.S   CHROUT_11               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+00201122  5281                     199mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+00201124  B2BC 000003E8            200mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+0020112A  66EC                     201mm             BNE.S   CHRLP_11                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+0020112C                           202mm CHROUT_11
+0020112C  13C0 00380004            203mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+00201132                           204mm             ENDM
+00201132  60DA                     205m             BRA.S   PRNTLP_10               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+00201134                           206m PRNTDN_10
+00201134  4E71                     207m             NOP     ; END MACRO
+00201136                           208m             ENDM
+00201136  B180                     209              eor.l   D0,D0                   ; clear D0 register
+00201138  2200                     210              move.l  D0,D1                   ; clear D1 also 
+0020113A  41F9 00080000            211              lea     ramPage1,A0             ; get ram test address
+00201140                           212              ;move.l D0,(A0)                 ; clear first memory address
+00201140                           213              ;move.b #$5A,D0                 ; get test pattern ($5A000000)
+00201140                           214              ;move.b D0,(A0)                 ; write test pattern to memory
+00201140                           215              ;move.l (A0),D1                 ; read test pattern from memory
+00201140  20BC 00000000            216              move.l  #0,(A0)                 ; clear memory address to start
+00201146  117C 00A1 0000           217              move.b  #$A1,0(A0)              ; write test pattern bytes
+0020114C  117C 0052 0001           218              move.b  #$52,1(A0)              ;  to memory
+00201152  117C 003A 0002           219              move.b  #$3A,2(A0)              ;
+00201158  117C 0045 0003           220              move.b  #$45,3(A0)              ;
+0020115E  2210                     221              move.l  (A0),D1                 ; read back byte from memory
+00201160  203C A1523A45            222              move.l  #$A1523A45,D0           ; test pattern comparison
+00201166  B081                     223              cmp.l   D1,D0                   ; check if it matches
+00201168  6600 0034                224              bne     ramTest2err1            ; error if no match
+0020116C  43F9 00201388            225              lea     strSuccess,A1           ; load success string
+00201172                           226m             prntStr
+00201172                           227m PRNTLP_12
+00201172  1019                     228m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+00201174  B03C 0000                229m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+00201178  671E                     230m             BEQ.S   PRNTDN_12               ; IF NULL, EXIT PRINT LOOP
+0020117A                           231mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+0020117A  B381                     232mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+0020117C                           233mm CHRLP_13
+0020117C  0839 0001 00380000       234mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+00201184                           235mm             ;BEQ.S  CHRLP_13                ; LOOP UNTIL EMPTY
+00201184  660A                     236mm             BNE.S   CHROUT_13               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+00201186  5281                     237mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+00201188  B2BC 000003E8            238mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+0020118E  66EC                     239mm             BNE.S   CHRLP_13                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+00201190                           240mm CHROUT_13
+00201190  13C0 00380004            241mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+00201196                           242mm             ENDM
+00201196  60DA                     243m             BRA.S   PRNTLP_12               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+00201198                           244m PRNTDN_12
+00201198  4E71                     245m             NOP     ; END MACRO
+0020119A                           246m             ENDM
+0020119A  6000 0036                247              bra     ramTest3                ; move on to next test
+0020119E                           248  ramTest2err1:
+0020119E                           249m             prntFail
+0020119E  43F9 0020137F            250m             LEA     STRFAILED,A1            ; LOAD FAILURE STRING
+002011A4                           251mm             PRNTSTR
+002011A4                           252mm PRNTLP_15
+002011A4  1019                     253mm             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+002011A6  B03C 0000                254mm             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+002011AA  671E                     255mm             BEQ.S   PRNTDN_15               ; IF NULL, EXIT PRINT LOOP
+002011AC                           256mmm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+002011AC  B381                     257mmm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+002011AE                           258mmm CHRLP_16
+002011AE  0839 0001 00380000       259mmm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+002011B6                           260mmm             ;BEQ.S  CHRLP_16                ; LOOP UNTIL EMPTY
+002011B6  660A                     261mmm             BNE.S   CHROUT_16               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+002011B8  5281                     262mmm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+002011BA  B2BC 000003E8            263mmm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+002011C0  66EC                     264mmm             BNE.S   CHRLP_16                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+002011C2                           265mmm CHROUT_16
+002011C2  13C0 00380004            266mmm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+002011C8                           267mmm             ENDM
+002011C8  60DA                     268mm             BRA.S   PRNTLP_15               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+002011CA                           269mm PRNTDN_15
+002011CA  4E71                     270mm             NOP     ; END MACRO
+002011CC                           271mm             ENDM
+002011CC  4E71                     272m             NOP
+002011CE                           273m             ENDM
+002011CE  6000 0002                274              bra     ramTest3
+002011D2                           275              
+002011D2                           276  ramTest3:
+002011D2  43FA 01E2                277              lea     strRamTest3(PC),A1      ; print header string
+002011D6                           278m             prntStr
+002011D6                           279m PRNTLP_17
+002011D6  1019                     280m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+002011D8  B03C 0000                281m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+002011DC  671E                     282m             BEQ.S   PRNTDN_17               ; IF NULL, EXIT PRINT LOOP
+002011DE                           283mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+002011DE  B381                     284mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+002011E0                           285mm CHRLP_18
+002011E0  0839 0001 00380000       286mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+002011E8                           287mm             ;BEQ.S  CHRLP_18                ; LOOP UNTIL EMPTY
+002011E8  660A                     288mm             BNE.S   CHROUT_18               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+002011EA  5281                     289mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+002011EC  B2BC 000003E8            290mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+002011F2  66EC                     291mm             BNE.S   CHRLP_18                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+002011F4                           292mm CHROUT_18
+002011F4  13C0 00380004            293mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+002011FA                           294mm             ENDM
+002011FA  60DA                     295m             BRA.S   PRNTLP_17               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+002011FC                           296m PRNTDN_17
+002011FC  4E71                     297m             NOP     ; END MACRO
+002011FE                           298m             ENDM
+002011FE  BF87                     299              eor.l   D7,D7                   ; D7 holds constant zero
+00201200                           300              
+00201200                           301  ; write 0 to all memory address, moving up
+00201200  B180                     302              eor.l   D0,D0                   ; D0 holds pattern to write ($00000000)
+00201202  207C 00000000            303              move.l  #ramBot,A0              ; A0 holds memory pointer
+00201208  243C 00080000            304              move.l  #(ramTop+1)>>2,D2       ; D2 holds loop counter
+0020120E                           305    ramTest31p1:
+0020120E  20C0                     306              move.l  D0,(A0)+                ; write pattern to memory & increment pointer
+00201210  5382                     307              subq.l  #1,D2                   ; decrement loop counter
+00201212  B487                     308              cmp.l   D7,D2                   ; check end of loop
+00201214  66F8                     309              bne     ramTest31p1             ; continue loop until all memory is tested
+00201216                           310              
+00201216                           311  ; read 0 from all memory addresses, & write $AAAAAAAA; moving up
+00201216  2600                     312              move.l  D0,D3                   ; D3 holds previous test pattern ($00000000)
+00201218  203C AAAAAAAA            313              move.l  #$AAAAAAAA,D0           ; D0 holds pattern to write ($AAAAAAAA)
+0020121E  207C 00000000            314              move.l  #ramBot,A0              ; A0 holds memory pointer
+00201224  243C 00080000            315              move.l  #(ramTop+1)>>2,D2       ; D2 holds loop counter
+0020122A  B381                     316              eor.l   D1,D1                   ; D1 holds read results
+0020122C                           317    ramTest3lp2:
+0020122C  3210                     318              move    (A0),D1                 ; read byte from last test
+0020122E  B283                     319              cmp.l   D3,D1                   ; compare with previous pattern
+00201230  6600 007C                320              bne     ramTest3err1            ; branch if they don't match
+00201234  20C0                     321              move.l  D0,(A0)+                ; write new pattern to memory & increment pointer
+00201236  5382                     322              subq.l  #1,D2                   ; decrement loop counter
+00201238  B487                     323              cmp.l   D7,D2                   ; check end of loop
+0020123A  66F0                     324              bne     ramTest3lp2             ; continue loop until all memory is tested
+0020123C                           325  
+0020123C                           326  ; read $AAAAAAAA from all memory addresses, & write 0; moving down
+0020123C  2600                     327              move.l  D0,D3                   ; D3 holds previous test pattern ($AAAAAAAA)
+0020123E  B180                     328              eor.l   D0,D0                   ; D0 holds pattern to write ($00000000)
+00201240  207C 00200000            329              move.l  #ramTop+1,A0            ; A0 holds memory pointer
+00201246  243C 00080000            330              move.l  #(ramTop+1)>>2,D2       ; D2 holds loop counter
+0020124C  B381                     331              eor.l   D1,D1                   ; D1 holds read results
+0020124E                           332    ramTest3lp3:
+0020124E  2220                     333              move.l  -(A0),D1                ; decrement counter and read byte from last test
+00201250  B283                     334              cmp.l   D3,D1                   ; compare with previous pattern
+00201252  6600 005A                335              bne     ramTest3err2            ; branch if they don't match
+00201256  2080                     336              move.l  D0,(A0)                 ; write new pattern to memory
+00201258  5382                     337              subq.l  #1,D2                   ; decrement loop counter
+0020125A  B487                     338              cmp.l   D7,D2                   ; check end of loop
+0020125C  66F0                     339              bne     ramTest3lp3             ; continue loop until all memory is tested
+0020125E                           340  
+0020125E                           341  ; read $00000000 from all memory addresses; moving down
+0020125E  2600                     342              move.l  D0,D3                   ; D3 holds previous test pattern ($00000000)
+00201260  207C 00200000            343              move.l  #ramTop+1,A0            ; A0 holds memory pointer
+00201266  243C 00080000            344              move.l  #(ramTop+1)>>2,D2       ; D2 holds loop counter
+0020126C  B381                     345              eor.l   D1,D1                   ; D1 holds read results
+0020126E                           346    ramTest3lp4:
+0020126E  2220                     347              move.l  -(A0),D1                ; decrement counter and read byte from last test
+00201270  B283                     348              cmp.l   D3,D1                   ; compare with previous pattern
+00201272  6600 003A                349              bne     ramTest3err3            ; branch if they don't match
+00201276  5382                     350              subq.l  #1,D2                   ; decrement loop counter
+00201278  B487                     351              cmp.l   D7,D2                   ; check end of loop
+0020127A  66F2                     352              bne     ramTest3lp4             ; continue loop until all memory is tested
+0020127C                           353  
+0020127C                           354  ; finished with memory test 3
+0020127C  43F9 00201388            355              lea     strSuccess,A1           ; load success string
+00201282                           356m             prntStr
+00201282                           357m PRNTLP_19
+00201282  1019                     358m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+00201284  B03C 0000                359m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+00201288  671E                     360m             BEQ.S   PRNTDN_19               ; IF NULL, EXIT PRINT LOOP
+0020128A                           361mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+0020128A  B381                     362mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+0020128C                           363mm CHRLP_20
+0020128C  0839 0001 00380000       364mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+00201294                           365mm             ;BEQ.S  CHRLP_20                ; LOOP UNTIL EMPTY
+00201294  660A                     366mm             BNE.S   CHROUT_20               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+00201296  5281                     367mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+00201298  B2BC 000003E8            368mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+0020129E  66EC                     369mm             BNE.S   CHRLP_20                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+002012A0                           370mm CHROUT_20
+002012A0  13C0 00380004            371mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+002012A6                           372mm             ENDM
+002012A6  60DA                     373m             BRA.S   PRNTLP_19               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+002012A8                           374m PRNTDN_19
+002012A8  4E71                     375m             NOP     ; END MACRO
+002012AA                           376m             ENDM
+002012AA  6000 0036                377              bra     ramTestEnd
+002012AE                           378  
+002012AE                           379  ramTest3err1:
+002012AE                           380  ramTest3err2:
+002012AE                           381  ramTest3err3:
+002012AE                           382m             prntFail
+002012AE  43F9 0020137F            383m             LEA     STRFAILED,A1            ; LOAD FAILURE STRING
+002012B4                           384mm             PRNTSTR
+002012B4                           385mm PRNTLP_22
+002012B4  1019                     386mm             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+002012B6  B03C 0000                387mm             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+002012BA  671E                     388mm             BEQ.S   PRNTDN_22               ; IF NULL, EXIT PRINT LOOP
+002012BC                           389mmm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+002012BC  B381                     390mmm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+002012BE                           391mmm CHRLP_23
+002012BE  0839 0001 00380000       392mmm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+002012C6                           393mmm             ;BEQ.S  CHRLP_23                ; LOOP UNTIL EMPTY
+002012C6  660A                     394mmm             BNE.S   CHROUT_23               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+002012C8  5281                     395mmm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+002012CA  B2BC 000003E8            396mmm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+002012D0  66EC                     397mmm             BNE.S   CHRLP_23                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+002012D2                           398mmm CHROUT_23
+002012D2  13C0 00380004            399mmm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+002012D8                           400mmm             ENDM
+002012D8  60DA                     401mm             BRA.S   PRNTLP_22               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+002012DA                           402mm PRNTDN_22
+002012DA  4E71                     403mm             NOP     ; END MACRO
+002012DC                           404mm             ENDM
+002012DC  4E71                     405m             NOP
+002012DE                           406m             ENDM
+002012DE  6000 0002                407              bra     ramTestEnd
+002012E2                           408  
+002012E2                           409  ramTestEnd:
+002012E2  43FA 00EB                410              lea     strHalt(PC),A1          ; get halt string
+002012E6                           411m             prntStr
+002012E6                           412m PRNTLP_24
+002012E6  1019                     413m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+002012E8  B03C 0000                414m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+002012EC  671E                     415m             BEQ.S   PRNTDN_24               ; IF NULL, EXIT PRINT LOOP
+002012EE                           416mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+002012EE  B381                     417mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+002012F0                           418mm CHRLP_25
+002012F0  0839 0001 00380000       419mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+002012F8                           420mm             ;BEQ.S  CHRLP_25                ; LOOP UNTIL EMPTY
+002012F8  660A                     421mm             BNE.S   CHROUT_25               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+002012FA  5281                     422mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+002012FC  B2BC 000003E8            423mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+00201302  66EC                     424mm             BNE.S   CHRLP_25                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+00201304                           425mm CHROUT_25
+00201304  13C0 00380004            426mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+0020130A                           427mm             ENDM
+0020130A  60DA                     428m             BRA.S   PRNTLP_24               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+0020130C                           429m PRNTDN_24
+0020130C  4E71                     430m             NOP     ; END MACRO
+0020130E                           431m             ENDM
+0020130E  4E72 3700                432              stop    #$3700                  ; disable trace & interrupts, then stop.
+00201312                           433  
+00201312                           434  intHndlr:
+00201312  43FA 00C6                435              lea     strIntErr(PC),A1        ; get interrupt error string
+00201316                           436m             prntStr ; and print
+00201316                           437m PRNTLP_26
+00201316  1019                     438m             MOVE.B  (A1)+,D0                ; GET NEXT BYTE OF STRING
+00201318  B03C 0000                439m             CMP.B   #0,D0                   ; CHECK FOR NULL TERMINATOR
+0020131C  671E                     440m             BEQ.S   PRNTDN_26               ; IF NULL, EXIT PRINT LOOP
+0020131E                           441mm             PRNTCHR ; CALL PRINT CHARACTER MACRO
+0020131E  B381                     442mm             EOR.L   D1,D1                   ; CLEAR LOOP COUNTER
+00201320                           443mm CHRLP_27
+00201320  0839 0001 00380000       444mm             BTST    #1,ACIACOM              ; CHECK IF ACIA TX REGISTER IS EMPTY
+00201328                           445mm             ;BEQ.S  CHRLP_27                ; LOOP UNTIL EMPTY
+00201328  660A                     446mm             BNE.S   CHROUT_27               ; IF EMPTY, SKIP AHEAD AND OUTPUT BYTE
+0020132A  5281                     447mm             ADDQ.L  #1,D1                   ; INCREMENT LOOP COUNTER
+0020132C  B2BC 000003E8            448mm             CMP.L   #1000,D1                ; LIMIT 1000 LOOPS
+00201332  66EC                     449mm             BNE.S   CHRLP_27                ; IF NOT AT LIMIT, THEN CONTINUE LOOP
+00201334                           450mm CHROUT_27
+00201334  13C0 00380004            451mm             MOVE.B  D0,ACIADAT              ; OUTPUT CHARACTER TO ACIA
+0020133A                           452mm             ENDM
+0020133A  60DA                     453m             BRA.S   PRNTLP_26               ; CONTINUE LOOP AND PRINT NEXT CHARACTER
+0020133C                           454m PRNTDN_26
+0020133C  4E71                     455m             NOP     ; END MACRO
+0020133E                           456m             ENDM
+0020133E  4EF9 00201000            457              jmp     START                   ; jump back to very beginning
+00201344                           458  
+00201344                           459  
+00201344                           460  strAciaInit:
+00201344= 0D 0A 41 43 49 41 ...    461              dc.b    $0D,$0A,'ACIA init complete.',$0D,$0A,0
+0020135C                           462  strOverlay:
+0020135C= 41 74 74 65 6D 70 ...    463              dc.b    'Attempting to disable overlay ... ',0
+0020137F                           464  strFailed:
+0020137F= 46 61 69 6C 65 64 ...    465              dc.b    'Failed',$0D,$0A,0
+00201388                           466  strSuccess:
+00201388= 53 75 63 63 65 73 ...    467              dc.b    'Success',$0D,$0A,0
+00201392                           468  strDatBusTst:
+00201392= 54 65 73 74 69 6E ...    469              dc.b    'Testing data bus byte ordering ... ',0
+002013B6                           470  strRamTest3:
+002013B6= 54 65 73 74 69 6E ...    471              dc.b    'Testing main memory ... ',0
+002013CF                           472  strHalt:
+002013CF= 48 61 6C 74 69 6E ...    473              dc.b    'Halting.',$0D,$0A,0
+002013DA                           474  strIntErr:
+002013DA= 0D 0A 55 6E 65 78 ...    475              dc.b    $0D,$0A,'Unexpected exception.',$0D,$0A,0
+002013F4                           476              
+002013F4                           477              
+002013F4                           478              
+002013F4                           479  
+002013F4                           480  * Put program code here
+002013F4                           481  
+002013F4  FFFF FFFF                482      SIMHALT             ; halt simulator
+002013F8                           483  
+002013F8                           484  * Put variables and constants here
+002013F8                           485  
+002013F8                           486      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ACIACOM             380000
+ACIADAT             380004
+ACIASET             16
+CHRLP_11            201118
+CHRLP_13            20117C
+CHRLP_16            2011AE
+CHRLP_18            2011E0
+CHRLP_2             20103C
+CHRLP_20            20128C
+CHRLP_23            2012BE
+CHRLP_25            2012F0
+CHRLP_27            201320
+CHRLP_4             201072
+CHRLP_6             2010B4
+CHRLP_9             2010E6
+CHROUT_11           20112C
+CHROUT_13           201190
+CHROUT_16           2011C2
+CHROUT_18           2011F4
+CHROUT_2            201050
+CHROUT_20           2012A0
+CHROUT_23           2012D2
+CHROUT_25           201304
+CHROUT_27           201334
+CHROUT_4            201086
+CHROUT_6            2010C8
+CHROUT_9            2010FA
+CLEAROVERLAY        20105A
+INTHNDLR            201312
+OVERLAYPORT         300000
+PRNTCHR             0
+PRNTDN_1            201058
+PRNTDN_10           201134
+PRNTDN_12           201198
+PRNTDN_15           2011CA
+PRNTDN_17           2011FC
+PRNTDN_19           2012A8
+PRNTDN_22           2012DA
+PRNTDN_24           20130C
+PRNTDN_26           20133C
+PRNTDN_3            20108E
+PRNTDN_5            2010D0
+PRNTDN_8            201102
+PRNTFAIL            293
+PRNTLP_1            201032
+PRNTLP_10           20110E
+PRNTLP_12           201172
+PRNTLP_15           2011A4
+PRNTLP_17           2011D6
+PRNTLP_19           201282
+PRNTLP_22           2012B4
+PRNTLP_24           2012E6
+PRNTLP_26           201316
+PRNTLP_3            201068
+PRNTLP_5            2010AA
+PRNTLP_8            2010DC
+PRNTSTR             181
+RAMBOT              0
+RAMPAGE1            80000
+RAMTEST1            201090
+RAMTEST1ERR1        2010D6
+RAMTEST2            20110A
+RAMTEST2ERR1        20119E
+RAMTEST3            2011D2
+RAMTEST31P1         20120E
+RAMTEST3ERR1        2012AE
+RAMTEST3ERR2        2012AE
+RAMTEST3ERR3        2012AE
+RAMTEST3LP2         20122C
+RAMTEST3LP3         20124E
+RAMTEST3LP4         20126E
+RAMTESTEND          2012E2
+RAMTOP              1FFFFF
+ROMBOT              200000
+STACKINIT           200000
+START               201000
+STRACIAINIT         201344
+STRDATBUSTST        201392
+STRFAILED           20137F
+STRHALT             2013CF
+STRINTERR           2013DA
+STROVERLAY          20135C
+STRRAMTEST3         2013B6
+STRSUCCESS          201388
+VECTOR              200000
