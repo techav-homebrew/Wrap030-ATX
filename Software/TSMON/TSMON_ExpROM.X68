@@ -29,6 +29,7 @@ RM2INIT:
     MOVE.L  A5,UTAB(A6)	    ;Copy User Com Table ptr
     LEA	    sBNR(PC),A4     ;Get pointer to banner string
     JSR	    PSTRING	        ;Print header string
+    BSR     ucCEnable       ;enable cache by default
     RTS
 
 ; This is our Help function which prints out a list of commands supported by 
@@ -86,7 +87,25 @@ vErrrr:
     MOVEM.L (A7)+,A0-A7/D0-D7   ; restore saved registers
     RTS                     ; and return to TSMON
 
+; Enable 68030 cache
+ucCEnable:
+    MOVEM.L A4/D0,-(A7)     ; save working registers
+    MOVE.L  #00000101,D0    ; enable data & instruction cache
+    DC.L    $4e7b0002       ; movec D0,CACR
+    LEA     sCEN(PC),A4     ; get pointer to feedback string
+    JSR     PSTRING         ; and print
+    MOVEM.L (A7)+,D0/A4     ; restore working registers
+    RTS
 
+; Disable 68030 cache
+ucCDisable:
+    MOVEM.L A4/D0,-(A7)     ; save working registers
+    EOR.L   D0,D0           ; disable data & instruction cache
+    DC.L    $4e7b0002       ; movec D0,CACR
+    LEA     sCDIS(PC),A4    ; get pointer to feedback string
+    JSR     PSTRING         ; and print
+    MOVEM.L (A7)+,D0/A4     ; restore working registers
+    RTS
 
 
 ;User Command Table
@@ -97,6 +116,12 @@ UCOM:
     DC.B	6,3
     DC.B	'BASIC '
     DC.L	ucLoadBasic
+    DC.B    8,3
+    DC.B    'CENABLE '
+    DC.L    ucCEnable
+    DC.B    8,4
+    DC.B    'CDISABLE'
+    DC.L    ucCDisable
     DC.B	0,0
 ;String Constants
 sBNR:	DC.B	'ROM2 Loaded.',0,0
@@ -117,7 +142,9 @@ sHELP:	DC.B	'Available Commands:',$0D,$0A
     DC.B	'REG <REG> <VALUE>',$0D,$0A
     DC.B	'--EXPANSION ROM--',$0D,$0A
     DC.B	'HELP',$0D,$0A
-    DC.B    'BASIC',$0D,$0A
+    DC.B    'BASic',$0D,$0A
+    DC.B    'CENable',$0D,$0A
+    DC.B    'CDISable',$0D,$0A
     DC.B	0,0
 
 sBAS1:
@@ -128,6 +155,10 @@ sBAS3:
     DC.B    'OK. Starting BASIC.',$0D,$0A,0,0
 sBASerr:
     DC.B    'Failed.',$0D,$0A,'Unable to run BASIC',$0D,$0A,0,0
+sCEN:
+    DC.B    'CPU L1 Cache Enabled',$0D,$0A,0,0
+sCDIS:
+    DC.B    'CPU L1 Cache Disabled',$0D,$0A,0,0
 
 
 *~Font name~Courier New~
