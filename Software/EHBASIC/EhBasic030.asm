@@ -119,16 +119,16 @@ ACIA_1	EQU	$00380000			; Console ACIA base address
 ;	MOVEM.L	(A7)+,A0/D1	; Restore working registers
 ;	RTS
 
-; This has been modified to time out after 120 attempts to read ACIA TDRE bit.
+; This has been modified to time out after 300 attempts to read ACIA TDRE bit.
 ; If it's still not set, go ahead and output the character anyway. 
 ; This was added due to problems with the 6850 not actually setting TRDE.
 ; Testing showed that it would still accept data to transmit, and the data
-; will actually be transmitted properly. A delay of 120 cycles is enough for
-; a byte to be output at 9600 bps with the system running at 12MHz. 
+; will actually be transmitted properly. A delay of 300 cycles is enough for
+; a byte to be output at 9600 bps with BASIC running from RAM at 12MHz. 
 VEC_OUT:
 	movem.l	A0/D1-D2,-(A7)	; Save working registers
 	lea.l	ACIA_1,A0		; A0 points to console ACIA
-	moveq.l	#120,D2			; loop counter
+	move.l	#300,D2			; loop counter
 TXNOTREADY:
 	move.b	(A0),D1			; Read ACIA status
 	BTST	#1,D1			; Test TDRE bit
