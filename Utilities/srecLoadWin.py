@@ -35,57 +35,44 @@ except Exception as e:
 	print("Error opening file: " + str(e))
 	exit()
 
-#time.sleep(2)
-#ser.flushInput()
-#print "erasing"
-#ser.write('erase')
-#time.sleep(2)
-#ser.flushInput()
-#print "chip"
-#ser.write('chip')
-#time.sleep(2)
-#ser.flushInput()
-#print "yes"
-#ser.write('yes')
-#time.sleep(2)
-
-#print "waiting"
-#while 1:
-#	rDat = ser.read()
-#	if rDat == '>':
-#		break
-		
 time.sleep(1)
-#ser.flushInput()
 
-print("Checking if chip needs erasing...")
+checkErase = 1
+if len(sys.argv) > 2:
+    if sys.argv[2]==0 or sys.argv[2]=="false" or sys.argv[2]=="0":
+        checkErase = 0
+
 needsErase = 0
-for x in range(1,8):
-    ser.read_until(expected=b'>')
-    ser.write(b'VERIFY\r\n')
-    ser.read_until(expected=b':')
-    sectStr = str(x) + "\r\n"
-    ser.write(bytes(sectStr,'ascii'))
-    ser.read_until(expected=b'\n')
-    time.sleep(2.0)
-    sectStatus = ser.read_until(expected=b'>')
-    #print(sectStatus)
-    if "Sector has data" in sectStatus.decode("utf-8"):
-        print("Sector " + str(x) + " has data.")
-        needsErase = 1
-        break
-    elif "Sector is erased" in sectStatus.decode("utf-8"):
-        print("Sector " + str(x) + " is clear.")
-        continue
-    elif "Sector is Locked" in sectStatus.decode("utf-8"):
-        print("Sector " + str(x) + " is locked. Erase may fail.")
-        needsErase = 1
-        break
-    else:
-        print("Unknown sector " + str(x) + " status: " + sectStatus.decode("utf-8"))
-        continue
+if checkErase == 0:
+    print("Skiping chip erase check.")
+else:
+    print("Checking if chip needs erasing...")
+    for x in range(1,8):
+        ser.read_until(expected=b'>')
+        ser.write(b'VERIFY\r\n')
+        ser.read_until(expected=b':')
+        sectStr = str(x) + "\r\n"
+        ser.write(bytes(sectStr,'ascii'))
+        ser.read_until(expected=b'\n')
+        time.sleep(2.0)
+        sectStatus = ser.read_until(expected=b'>')
+        #print(sectStatus)
+        if "Sector has data" in sectStatus.decode("utf-8"):
+            print("Sector " + str(x) + " has data.")
+            needsErase = 1
+            break
+        elif "Sector is erased" in sectStatus.decode("utf-8"):
+            print("Sector " + str(x) + " is clear.")
+            continue
+        elif "Sector is Locked" in sectStatus.decode("utf-8"):
+            print("Sector " + str(x) + " is locked. Erase may fail.")
+            needsErase = 1
+            break
+        else:
+            print("Unknown sector " + str(x) + " status: " + sectStatus.decode("utf-8"))
+            continue
 
-if needsErase == 1:
+if needsErase == 1 and checkErase == 1:
     print("Attempting to erase chip...")
     ser.read_until(expected=b'>')
     ser.write(b'ERASE\r\n')
