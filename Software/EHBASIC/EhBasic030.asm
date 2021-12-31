@@ -83,6 +83,14 @@ nobrk	EQU	0	; null response to INPUT causes a break
 ; We're putting BASIC in the last 64k page of ROM
 	ORG $00270000
 
+acia1Com            equ $00380000
+acia1Dat            equ acia1Com+4
+acia2Com            equ $00380008
+acia2Dat            equ acia2Com+4
+
+acia2offset         equ 8
+aciaDatOffset       equ 4
+
 ACIA_1	EQU	$00380000			; Console ACIA base address
 
 ; This is the first instruction in this program. 
@@ -143,19 +151,44 @@ TXCHAROUT:
 ; input a character from the console into register d0
 ; else return Cb=0 if there's no character available
 
+;VEC_IN:
+;	MOVEM.L	A0/D1,-(A7)	; Save working registers
+;	LEA.L	ACIA_1,A0	; A0 points to console ACIA
+;	MOVE.B	(A0),D1		; Read ACIA status
+;	BTST	#0,D1		; Test RDRF bit
+;	BEQ.S	RXNOTREADY	; Branch If ACIA Rx not ready
+;	MOVE.B	4(A0),D0	; Read character received
+;	MOVEM.L	(A7)+,A0/D1	; Restore working registers
+;	ORI.b	#1,CCR	; Set the carry, flag we got a byte
+;	RTS		; Return
+;RXNOTREADY:
+;	MOVEM.L	(A7)+,A0/D1	; Restore working registers
+;	ANDI.b	#$FE,CCR	; Clear the carry, flag character available
+;	RTS
+
+; Modified to check the primary and secondary ACIA for input
 VEC_IN:
-	MOVEM.L	A0/D1,-(A7)	; Save working registers
-	LEA.L	ACIA_1,A0	; A0 points to console ACIA
-	MOVE.B	(A0),D1	; Read ACIA status
-	BTST	#0,D1	; Test RDRF bit
-	BEQ.S	RXNOTREADY	; Branch If ACIA Rx not ready
-	MOVE.B	4(A0),D0	; Read character received
-	MOVEM.L	(A7)+,A0/D1	; Restore working registers
-	ORI.b	#1,CCR	; Set the carry, flag we got a byte
-	RTS		; Return
+	MOVEM.L A0/D1,-(A7)	; Save working registers
+	LEA.L	ACIA_1,A0	; Get ACIA 1 pointer
+	MOVE.B	(A0),D1		; Read ACIA 1 status
+	BTST	#0,D1		; Test RDRF bit 1
+	BNE.S	RX1Ready	; Branch if ACIA 1 has data
+	MOVE.B  acia2offset(A0),D1	; Read ACIA 2 status
+	BTST	#0,D1		; Test RDRF bit 2
+	BNE.s   RX2Ready	; Branch if ACIA 2 has data
 RXNOTREADY:
 	MOVEM.L	(A7)+,A0/D1	; Restore working registers
-	ANDI.b	#$FE,CCR	; Clear the carry, flag character available
+	ANDI.B	#$FE,CCR	; Clear carry flag, no character available
+	RTS
+
+RX1Ready:
+	MOVE.B	aciaDatOffset(A0),D0	; Read character received from ACIA 1
+	BRA.S	RXDone		; done
+RX2Ready:
+	MOVE.B	aciaDatOffset+acia2offset(A0),D0	; Read char received from ACIA 2
+RXDone:
+	MOVEM.L	(A7)+,A0/D1	; Restore working registers
+	ORI.b	#1,CCR		; Set carry flag
 	RTS
 
 ;************************************************************************************
