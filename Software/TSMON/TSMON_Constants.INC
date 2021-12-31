@@ -42,9 +42,14 @@ ramTop              equ $001FFFFF
 stackTop            equ ramTop+1
 ramBot              equ $00000000
 
-aciaCom             equ $00380000
-aciaDat             equ aciaCom+4
+acia1Com            equ $00380000
+acia1Dat            equ acia1Com+4
+acia2Com            equ $00380008
+acia2Dat            equ acia2Com+4
+
+acia2offset         equ 8
 aciaDatOffset       equ 4
+
 ;aciaSet             equ $16            ; 8N1,÷64 (9600),no interrupts
 aciaSet             equ $15            ; 8N1,÷16 (38400),no interrupts
 
@@ -61,8 +66,8 @@ CTRL_A:             EQU $01            ; Control_A forces return to monitor
 
 ; Device addresses
 STACK:              EQU stackTop       ; stack pointer
-ACIA_1:             EQU aciaCom        ; console ACIA control
-ACIA_2:             EQU aciaCom        ; aux ACIA control (not used)
+ACIA_1:             EQU acia1Com       ; console ACIA control
+ACIA_2:             EQU acia2Com       ; aux ACIA control (not used)
 X_BASE:             EQU $08            ; Start of exception vector table
 TRAP_14:            EQU $4E4E          ; Code for TRAP #14
 MAXCHR:             EQU 64             ; Length of line input buffer
@@ -81,3 +86,4 @@ TSK_T:              DS.W 37            ; Frame for D0-D7,A0-A6,USP,SSP,SW,PC
 BP_TAB:             DS.W 24            ; Breakpoint table
 FIRST:              DS.B 512           ; DCB area
 BUFFER:             DS.B 256           ; 256 bytes for I/O Buffer
+ptrPSTRING:         DS.L 1             ; pointer to PSTRING function (used by ROM2)

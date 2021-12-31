@@ -57,6 +57,10 @@ COLD:                                  ; Cold entry point for monitor
         BSR SET_DCB                    ; Setup DCB table in RAM
         LEA BANNER(PC),A4              ; Point to banner
         BSR.S HEADING                  ; and print heading
+
+        LEA DATA,A6                    ; make sure we still have the data pointer
+        MOVE.L #PSTRING,ptrPSTRING(A6) ; save pointer to PSTRING function
+        
         MOVE.L #expROM,A0              ; A0 points to extension ROM
         MOVE.L (A0),D0                 ; Read first longword in extension ROM
         CMP.L #'ROM2',D0               ; If extension begins with 'ROM2' then
@@ -78,12 +82,18 @@ WARM:
 ; Some initialization and basic routines
 
 SETACIA:                               ; Setup ACIA parameters
-        LEA ACIA_1,A0                  ; A0 points to console ACIA
-        MOVE.B #$03,(A0)               ; Reset ACIA1
+;       LEA ACIA_1,A0                  ; A0 points to console ACIA
+;       MOVE.B #$03,(A0)               ; Reset ACIA1
 ;       MOVE.B #$03,1(A0)              ;   Reset ACIA2
-        MOVE.B #aciaSet,(A0)           ; Set up ACIA1 constants (no IRQ,
+;       MOVE.B #aciaSet,(A0)           ; Set up ACIA1 constants (no IRQ,
 ;       MOVE.B #$15,1(A0)              ;   RTS* low,8 bit,no parity,1 stop)
-        RTS                            ; Return
+;       RTS                            ; Return
+        LEA ACIA_1,A0                   ; A0 points to console ACIA
+        MOVE.B #$03,(A0)                ; Reset ACIA 1
+        MOVE.B #$03,acia2offset(A0)     ; Reset ACIA 2
+        MOVE.B #aciaSet,(A0)            ; Configure ACIA 1
+        MOVE.B #aciaSet,acia2offset(A0) ; Configure ACIA 2
+        RTS
 
 NEWLINE:                               ; Move cursor to start of newline
         MOVEM.L A4,-(A7)               ; Save A4

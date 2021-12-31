@@ -13,7 +13,12 @@ RAMBASIC:   EQU ramBot+$1000    ; above vector table & TSMON globals
 HEAPBASIC:  EQU RAMBASIC+$4000  ; above BASIC program in RAM
 SIZBASIC:   EQU $4000       ; total size of BASIC to copy from ROM (~16kB)
 
-PSTRING:    EQU $002004B6   ; I really need a good linker ...
+;PSTRING:    EQU $002004B6   ; I really need a good linker ...
+callPSTRING:    MACRO
+    LEA DATA,A0                 ; get data pointer
+    MOVE.L ptrPSTRING(A0),A0    ; get PSTRING pointer
+    JSR (A0)                    ; call PSTRING function
+    ENDM
 
     ORG	expROM
 ; This is loaded by TSMON on startup to confirm an expansion ROM is installed
@@ -28,7 +33,8 @@ RM2INIT:
     LEA	    UCOM,A5	        ;A5 points to User Command Table
     MOVE.L  A5,UTAB(A6)	    ;Copy User Com Table ptr
     LEA	    sBNR(PC),A4     ;Get pointer to banner string
-    JSR	    PSTRING	        ;Print header string
+;   JSR	    PSTRING	        ;Print header string
+    callPSTRING
     BSR     ucCEnable       ;enable cache by default
     RTS
 
@@ -36,14 +42,16 @@ RM2INIT:
 ; TSMON and this expansion ROM
 ucHELP:	
     LEA	    sHELP(PC),A4	;Get pointer to help text string
-    JSR	    PSTRING	        ;Print help text string
+;   JSR	    PSTRING	        ;Print help text string
+    callPSTRING
     RTS
 
 ; This function will load BASIC from ROM into RAM and jump to it.
 ucLoadBasic:                ; load BASIC into RAM and execute
-    MOVEM.L A0-A7/D0-D7,-(A7)   ; save all registers in case we make it back here
+    MOVEM.L A0-A6/D0-D7,-(A7)   ; save all registers in case we make it back here
     LEA     sBAS1(PC),A4    ; get pointer to header text string
-    JSR     PSTRING         ; print header text string
+;   JSR     PSTRING         ; print header text string
+    callPSTRING
 .startCopy:
     LEA     ROMBASIC,A0     ; get pointer to BASIC in ROM
     LEA     RAMBASIC,A1     ; get pointer to RAM above vector table
@@ -53,7 +61,8 @@ ucLoadBasic:                ; load BASIC into RAM and execute
     MOVE.L  (A0)+,(A1)+     ; copy BASIC into RAM, one Longword at a time
     DBRA    D0,.copyLoop    ; keep copying until finished
     LEA     sBAS2(PC),A4    ; get pointer to verifying string
-    JSR     PSTRING         ; print string
+;   JSR     PSTRING         ; print string
+    callPSTRING
 .startVerify:
     LEA     ROMBASIC,A0
     LEA     RAMBASIC,A1
@@ -66,7 +75,8 @@ ucLoadBasic:                ; load BASIC into RAM and execute
     DBRA    D0,.verifyLoop
 .verifyGood:
     LEA     sBAS3(PC),A4    ; get pointer to verify good string
-    JSR     PSTRING         ; and print
+;   JSR     PSTRING         ; and print
+    callPSTRING
     EOR.L   D0,D0           ; clear D0
     LEA     RAMBASIC,A1     ; get pointer to BASIC in RAM
     MOVE.W  $E(A1),D0       ; get offset for BASIC cold start routine
@@ -77,13 +87,14 @@ ucLoadBasic:                ; load BASIC into RAM and execute
     SUBI.L  #4,D0            ; make room for our return address
     SUB.L   A0,D0           ; get current RAM free
     JSR     (A1)            ; jump to BASIC in RAM
-    MOVEM.L (A7)+,A0-A7/D0-D7   ; by some miracle we've come back.
+    MOVEM.L (A7)+,A0-A6/D0-D7   ; by some miracle we've come back.
     RTS                     ; Restore registers and return
 
 vErrrr:
 ; BASIC in RAM does not match BASIC in ROM
     LEA     sBASerr(PC),A4  ; get pointer to error string
-    JSR     PSTRING         ; print error
+;   JSR     PSTRING         ; print error
+    callPSTRING
     MOVEM.L (A7)+,A0-A7/D0-D7   ; restore saved registers
     RTS                     ; and return to TSMON
 
@@ -93,7 +104,8 @@ ucCEnable:
     MOVE.L  #00000101,D0    ; enable data & instruction cache
     DC.L    $4e7b0002       ; movec D0,CACR
     LEA     sCEN(PC),A4     ; get pointer to feedback string
-    JSR     PSTRING         ; and print
+;   JSR     PSTRING         ; and print
+    callPSTRING
     MOVEM.L (A7)+,D0/A4     ; restore working registers
     RTS
 
@@ -103,7 +115,8 @@ ucCDisable:
     EOR.L   D0,D0           ; disable data & instruction cache
     DC.L    $4e7b0002       ; movec D0,CACR
     LEA     sCDIS(PC),A4    ; get pointer to feedback string
-    JSR     PSTRING         ; and print
+;   JSR     PSTRING         ; and print
+    callPSTRING
     MOVEM.L (A7)+,D0/A4     ; restore working registers
     RTS
 
@@ -156,9 +169,9 @@ sBAS3:
 sBASerr:
     DC.B    'Failed.',$0D,$0A,'Unable to run BASIC',$0D,$0A,0,0
 sCEN:
-    DC.B    'CPU L1 Cache Enabled',$0D,$0A,0,0
+    DC.B    ' CPU L1 Cache Enabled',$0D,$0A,0,0
 sCDIS:
-    DC.B    'CPU L1 Cache Disabled',$0D,$0A,0,0
+    DC.B    ' CPU L1 Cache Disabled',$0D,$0A,0,0
 
 
 *~Font name~Courier New~
