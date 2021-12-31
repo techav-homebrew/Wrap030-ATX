@@ -8,9 +8,8 @@ if len(sys.argv) < 3:
     exit()
 
 # open the specified serial port
-ser = serial.Serial(port=sys.argv[1],baudrate=37400,timeout=1)
 try:
-    ser.open()
+    ser = serial.Serial(port=sys.argv[1],baudrate=37400,timeout=1)
     ser.flushInput()
     ser.flushOutput()
 except Exception as e:
@@ -25,7 +24,7 @@ except Exception as e:
     exit()
 
 for line in f.readlines():
-    ser.write(lin)
-    print(lin)
+    ser.write(bytes(line.rstrip('\n')+'\r\n','ascii'))
+    print(line)
     # delay after each line to allow BASIC to process it
     time.sleep(0.5)
