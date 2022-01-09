@@ -1,3 +1,5 @@
+NEW
+5 REM just draws a line ..
 10 X1=2
 20 X2=150
 30 Y1=10
