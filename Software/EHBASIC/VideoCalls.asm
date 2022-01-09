@@ -42,6 +42,7 @@ clrPixel:   bra     clrPixel1
 fillRow:    bra     fillRow1
 fillBuf:    bra     fillBuf1
 drawLine:   bra     drawLine1
+scrollV:    bra     scrollV1
 
     ORG $00260100
 
@@ -256,15 +257,27 @@ lineEnd:
     movem.l (SP)+,D0-D1 ; restore saved registers
     rts
 
+;******************************************************************************
+; scrollV
+;   scrolls entire screen up/down by 1 line
+; CALL SCROLLV DIR
+scrollV1:
+    jsr     LAB_GTBY        ; get byte parameter in D0
+    lea     vidBuf,A0       ; get base video buffer pointer
+    cmp.b   #0,D0           ; check direction
+    beq     scrollVdn       ; if 0, then scroll down
+                            ; else scroll up
 
+scrollVup:
+    FOR.W D0 = #64 TO #21887 DO.S
+        move.b  0(A0,D0.w),-64(A0,D0.w) ; move by back 64 addresses
+    ENDF
+    bra     endScroll       ; go to end
 
-;.lineloop:
-;    movea.L SP,A0           ; save stack pointer
-;    pea     .lineloop2      ; push return address to stack
-;    movem.L D0-D2,-(SP)     ; save working registers (needed for next sub)
-;    move.w  pixY1(A0),-(SP) ; push y0 value to stack
-;    move.w  pixX1(A0),-(SP) ; push y0 value to stack
-;    move.w  pixDat(A0),D0   ; fetch pixel data
-;    move.w  D0,-(SP)        ; and push to stack
-;    bra     pixManipDraw    ; draw pixel
-;.lineloop2:
+scrollVdn:
+    FOR.W D0 = #21824 TO #0 BY #-1 DO.S
+        move.b  0(A0,D0.w),64(A0,D0.w)  ; move up by 64 addresses
+    ENDF
+
+endScroll:
+    RTS                     ; nothing else to do here
