@@ -1,3 +1,4 @@
+NEW
 5 REM http://www.rosettacode.org/wiki/Mandelbrot_set#BASIC
 10 X1=59:Y1=21
 20 I1=-1.0:I2=1.0:R1=-2.0:R2=1.0
