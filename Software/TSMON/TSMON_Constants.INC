@@ -3,7 +3,7 @@
 ;  512kB    RAM (ROM Overlay)      $0000,0000 - $0007,FFFF
 ;  512kB    RAM                    $0008,0000 - $000F,FFFF
 ;  512kB    RAM                    $0010,0000 - $0017,FFFF
-;  512kB    RAM                    $0018,0000 - $001F,FFFF
+;  512kB    RAM + Video Buffer     $0018,0000 - $001F,FFFF
 ;  512kB    ROM                    $0020,0000 - $0027,FFFF
 ;  512kB    [Empty,Bus Error]      $0028,0000 - $002F,FFFF
 ;  512kB    Overlay Switch         $0030,0000 - $0037,FFFF
@@ -23,23 +23,27 @@
 ;   64kB    [Future]               $0023,0000 - $0023,FFFF
 ;   64kB    [Future]               $0024,0000 - $0024,FFFF
 ;   64kB    [Future]               $0025,0000 - $0025,FFFF
-;   64kB    [Future]               $0026,0000 - $0026,FFFF
+;   64kB    EhBASIC exp Calls      $0026,0000 - $0026,FFFF
 ;   64kB    Enhanced BASIC         $0027,0000 - $0027,FFFF
 
 romBot              equ $00200000
 romTop              equ $0027FFFF
-romSector7          equ romBot+$70000
-romSector6          equ romBot+$60000
+romSector7          equ romBot+$70000       ; EhBASIC
+romSector6          equ romBot+$60000       ; EhBASIC exp calls
 romSector5          equ romBot+$50000
 romSector4          equ romBot+$40000
 romSector3          equ romBot+$30000
 romSector2          equ romBot+$20000
-romSector1          equ romBot+$10000
+romSector1          equ romBot+$10000       ; TSMON exp ROM
+romSector0          equ romBot              ; TSMON
 
 expROM              equ romSector1
 
 ramTop              equ $001FFFFF
-stackTop            equ ramTop+1
+vidBuf              equ $001FA700
+vidBufEnd           equ $001FFC7F
+;stackTop            equ ramTop+1
+stackTop            equ vidBuf
 ramBot              equ $00000000
 
 acia1Com            equ $00380000

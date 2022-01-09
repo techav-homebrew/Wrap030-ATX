@@ -161,17 +161,18 @@ sHELP:	DC.B	'Available Commands:',$0D,$0A
     DC.B	0,0
 
 sBAS1:
-    DC.B    'Loading BASIC ...',$0D,$0A,0,0
+    DC.B    'Loading BASIC ... ',0,0
 sBAS2:
-    DC.B    'OK',$0D,$0A,'Verifying BASIC ...',0,0
+    DC.B    'OK',$0D,$0A,'Verifying BASIC ... ',0,0
 sBAS3:
-    DC.B    'OK. Starting BASIC.',$0D,$0A,0,0
+    DC.B    'OK',$0D,$0A,'Starting BASIC ... ',$0D,$0A,0,0
 sBASerr:
     DC.B    'Failed.',$0D,$0A,'Unable to run BASIC',$0D,$0A,0,0
 sCEN:
     DC.B    ' CPU L1 Cache Enabled',$0D,$0A,0,0
 sCDIS:
     DC.B    ' CPU L1 Cache Disabled',$0D,$0A,0,0
+
 
 
 *~Font name~Courier New~
