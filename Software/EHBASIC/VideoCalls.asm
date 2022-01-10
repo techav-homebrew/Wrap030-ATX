@@ -24,6 +24,10 @@ pixX1:      EQU 2
 pixDat:     EQU 0
 
 vidBuf:     EQU $001FA700   ; frame buffer base address
+vidBufLen:  EQU 21888       ; frame buffer length
+vidBufEnd:  EQU vidBuf+vidBufLen-1  ; frame buffer end address
+
+fontData:   EQU $00250000
 
 ; in lieu of a working linker, copy necessary EhBASIC function addresses here
 LAB_GTWO:   EQU $00271760    
@@ -33,6 +37,7 @@ LAB_GTBY:   EQU $0027174C
 LAB_EVNM:   EQU $00270C6A
 LAB_EVIR:   EQU $0027112E
 LAB_1C01:   EQU $00270DD8
+LAB_XERR:   EQU $002701AA
 
 
     ORG $00260000           ; this code will sit in ROM page 6
@@ -41,10 +46,31 @@ setPixel:   bra     setPixel1
 clrPixel:   bra     clrPixel1
 fillRow:    bra     fillRow1
 fillBuf:    bra     fillBuf1
-drawLine:   bra     drawLine1
+drawLine:   bra     errUnimp
 scrollV:    bra     scrollV1
+scrollVX:   bra     scrollVX1
+drawChar:   bra     drawChar1
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
+            bra     errUnimp
 
     ORG $00260100
+
+;******************************************************************************
+; error unimplemented
+errUnimp:
+    MOVEQ   #$2E,d7         ; error code $2E "Not implemented" error
+    JMP     LAB_XERR        ; do error #d7, then warm start
 
 ;******************************************************************************
 ; setPixel
@@ -153,109 +179,8 @@ fillBuf1:
 ; written using structured assembly directives for easy68k
 
 drawLine1:
-    movem.l D0-D1,-(SP)     ; save working registers
-    lea     -22(SP),SP      ; set up stack frame for local variables
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    move.w  D0,pixX1(SP)    ; save X1 parameter
-    jsr     LAB_1C01        ; scan for ","
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    move.w  D0,pixY1(SP)    ; save Y1 parameter
-    jsr     LAB_1C01        ; scan for ","
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    move.w  D0,pixX2(SP)    ; save X2 parameter
-    jsr     LAB_1C01        ; scan for ","
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    move.w  D0,pixY2(SP)    ; save Y2 parameter
-    jsr     LAB_1C01        ; scan for ","
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    cmpi.b  #0,D0           ; check if 0
-    beq     .linepen0       ; 
-    move.b  #1,pixDat(SP)   ; set pen for set
-    bra     .startline
-.linepen0:
-    move.b  #0,pixDat(SP)   ; set pen for clear
-.startline:
-.lineInitX:
-    move.w  pixX1(SP),D0    ; fetch x0
-    move.w  pixX2(SP),D1    ; fetch x1
-    IF.W D0 <LT> D1 THEN.S
-        move.w  #1,pixSX(SP)    ; sx=1
-        sub.w   D0,D1           ; dx=x1-x0
-        move.w  D1,pixDX(SP)    ; and save dx
-    ELSE.S
-        move.w  #-1,pixSX(SP)   ; sx=-1
-        sub.w   D1,D0           ; dx=x0-x1
-        move.w  D0,pixDX(SP)    ; and save dx
-    ENDI
-.lineInitY:
-    move.w  pixY1(SP),D0    ; fetch y0
-    move.w  pixY2(SP),D1    ; fetch y1
-    IF.W D0 <LT> D1 THEN.S
-        move.w  #1,pixSY(SP)    ; sy=1
-        sub.w   D0,D1           ; dy=y1-y0
-        move.w  D1,pixDY(SP)    ; and save dy
-    ELSE.S
-        move.w  #-1,pixSY(SP)   ; sy=-1
-        sub.w   D1,D0           ; dy=y0-y1
-        move.w  D0,pixDY(SP)    ; and save dy
-    ENDI
-.lineInitErr:
-    move.w  pixDX(SP),D0    ; fetch dx
-    move.w  pixDY(SP),D1    ; fetch dy
-    IF.W D0 <GT> D1 THEN.S
-        move.w  D0,pixErr(SP)   ; err=dx
-    ELSE.S
-        neg.w   D1              ; err=-dy
-        move.w  D1,pixErr(SP)   ; and save dy
-    ENDI
-.lineloop:
-    WHILE <T> DO.S
-        ; call set pixel here
-        movea.l SP,A0           ; save stack pointer
-        pea     .lineloop2(PC)  ; push return address to stack
-        movem.l D0-D2,-(SP)     ; save registers as needed for next sub
-        move.w  pixY1(A0),-(SP) ; push y0 value to stack
-        move.w  pixX1(A0),-(SP) ; push x0 value to stack
-        move.w  pixDat(A0),-(SP)    ; push pixel data value to stack
-        bra     pixManipDraw    ; draw pixel
-.lineloop2:
-        move.w  pixX2(SP),D0    ; fetch x1
-        move.w  pixY2(SP),D1    ; fetch y1
-        IF.W pixX1(SP) <EQ> D0 AND.W pixY1(SP) <EQ> D1 THEN.S
-            bra lineEnd
-        ENDI
-.lineloopUpdateErr:
-        move.w  pixErr(SP),D0   ; fetch err
-        move.w  D0,pixE2(SP)    ; e2=err
-.lineloopUpdateX:
-        move.w  pixDX(SP),D1    ; fetch dx
-        neg.w   D1              ; temp = -dx
-        IF.W D0 <GT> D1 THEN.S  ; if e2 > -dx
-            move.w  pixDY(SP),D1    ; fetch dy
-            sub.w   D1,D0           ; err=err-dy
-            move.w  D0,pixErr(SP)   ; save new err
-            move.w  pixX1(SP),D0    ; fetch x0
-            add.w   pixSX(SP),D0    ; x0=x0+sx
-            move.w  D0,pixX1(SP)    ; save new x0
-        ENDI
-.lineloopUpdateY:
-        move.w  pixDY(SP),D0        ; fetch dy
-        IF.W pixE2(SP) <LT> D0 THEN.S
-            move.w  pixDX(SP),D0    ; fetch dx
-            add.w   D0,pixErr(SP)   ; err=err+dx
-            move.w  pixSY(SP),D0    ; fetch sy
-            add.w   D0,pixY1(SP)    ; y0=y0+sy
-        ENDI
-    ENDW
-lineEnd:
-    lea     22(SP),SP   ; dismantle stack frame
-    movem.l (SP)+,D0-D1 ; restore saved registers
-    rts
+    MOVEQ   #$2E,d7         ; error code $2E "Not implemented" error
+    JMP     LAB_XERR        ; do error #d7, then warm start
 
 ;******************************************************************************
 ; scrollV
@@ -281,3 +206,92 @@ scrollVdn:
 
 endScroll:
     RTS                     ; nothing else to do here
+
+;******************************************************************************
+; scrollVX
+;   scrolls entire screen up/down by X lines
+; CALL SCROLLV OFFSET
+;   offset is signed integer range (-8 to -1) or (1 to 7)
+scrollVX1:
+    jsr     LAB_GTBY        ; get byte parameter in DO
+    move.b  D0,D1           ; copy to D1
+
+    btst    #7,D1           ; check sign bit for sign extend
+    beq.s   .scrollVXsexneg ; jump to sign extend negative
+    andi.l  #$00000007,D1   ; sign extend positive
+    bra     .scrollVXmul    ; jump to offset multiply
+.scrollVXsexneg:
+    ori.l   #$fffffff8,D1   ; sign extend negative
+.scrollVXmul:
+    asl.l   #6,D1           ; multiply by 64 to get address offset
+    cmpi.b  #0,D0           ; check initial offset
+    beq.s   scrollVXend     ; offset is 0, skip to end
+    blt.s   scrollVXpos     ; offset is positive
+    bgt.s   scrollVXneg     ; offset is negative
+scrollVXend:
+    rts
+
+scrollVXpos:
+    ; positive offset means each byte is copied (64*offset) bytes forward
+    ; so we need to start copying from the end of the buffer and move back
+    move.w  #vidBufLen,D0   ; copy buffer length into D0
+    sub.w   D1,D0           ; subtract multiplied offset from loop counter
+    lea     vidBufEnd,A0    ; A0 points to end of buffer
+    suba.l  D1,A0           ; subtract multiplied offset from base pointer
+.scrollVXposLoop:
+    move.b  (A0),0(A0,D1.w) ; copy byte to address+offset
+    subq.l  #1,A0           ; decrement base pointer
+    dbra    D0,.scrollVXposLoop ; continue loop until counter expired
+    bra.s   scrollVXend     ; jump to end
+
+scrollVXneg:
+    ; negative offset means each byte is copied (64*offset) bytes backward
+    ; so we need to start copying from the start of the buffer and move fore
+    move.w  #vidBufLen,D0   ; copy buffer length into D0
+    add.w   D1,D0           ; subtract multiplied offset from loop counter
+    move.l  D1,D2           ; copy multiplied offset
+    neg.l   D2              ; make positive
+    lea     vidBuf,A0       ; A0 points to start of buffer
+    adda.l  D2,A0           ; add starting offset to base pointer
+.scrollVXnegLoop:
+    move.b  (A0),0(A0,D1.w) ; copy byte to address+offset (offset is negative here)
+    addq.l  #1,A0           ; increment base pointer
+    dbra    D0,.scrollVXnegLoop ; continue loop until counter expired
+    bra.s   scrollVXend     ; jump to end
+
+;******************************************************************************
+; drawChar
+;   prints a single character at a given position on screen
+; CALL DRAWCHAR X,Y,C
+drawChar1:
+    movem.l D0-D2/A1,-(SP)  ; save working registers
+    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
+    jsr     LAB_EVIR        ; evaluate integer expression
+    andi.w  #$3F,D0         ; mask out invalid X values
+    move.w  D0,-(SP)        ; push X value to stack for later use
+    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
+    jsr     LAB_EVIR        ; evaluate integer expression
+    andi.w  #$3F,D0         ; mask out invalid values
+    moveq   #9,D1           ; get ready to shift Y into position
+    lsl.w   D1,D0           ; shift Y position for offset
+    move.w  (SP),D1         ; pop X value off stack
+    or.w    D1,D0           ; combine X & Y positions into pointer offset
+    move.w  D0,(SP)         ; push to stack to save for later
+                            ; (SP) is vidbuffer offset for specified position
+    jsr     LAB_1C01        ; scan for ","
+    jsr     LAB_GTBY        ; get byte parameter in D0 (char to print)
+    eor.L   D1,D1           ; clear D1
+    move.b  D0,D1           ; copy char into D1
+    lsl.w   #3,D1           ; shift into offset location
+                            ; D1 is font data offset to specified character
+    lea     fontData,A0     ; get pointer to font data
+    lea     vidBuf,A1       ; get pointer to video buffer
+    move.w  (SP)+,D0        ; get vidbuffer offset
+                            ; D0 is vidbuffer offset for specified position
+    FOR D2 = 0 TO 7 DO.S
+        move.b  0(A0,D1.w),$000(A1,D0.w)    ; copy video data
+        addq.w  #1,D1                       ; increment font offset
+        addi.w  #$40,D0                     ; increment video offset
+    ENDF
+    movem.l (SP)+,D0-D2/A1  ; restore working registers
+    rts

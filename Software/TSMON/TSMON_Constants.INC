@@ -30,7 +30,7 @@ romBot              equ $00200000
 romTop              equ $0027FFFF
 romSector7          equ romBot+$70000       ; EhBASIC
 romSector6          equ romBot+$60000       ; EhBASIC exp calls
-romSector5          equ romBot+$50000
+romSector5          equ romBot+$50000       ; Font Data
 romSector4          equ romBot+$40000
 romSector3          equ romBot+$30000
 romSector2          equ romBot+$20000

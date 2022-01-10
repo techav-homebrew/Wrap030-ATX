@@ -27,4 +27,4 @@ for line in f.readlines():
     ser.write(bytes(line.rstrip('\n')+'\r\n','ascii'))
     print(line)
     # delay after each line to allow BASIC to process it
-    time.sleep(0.5)
+    time.sleep(0.05*len(line))
