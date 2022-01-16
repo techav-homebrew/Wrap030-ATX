@@ -1,7 +1,8 @@
 ; 2022/1/7 techav
 ; function calls for EhBASIC for drawing to a linear frame buffer
 
-    INCLUDE "EhBasic030.inc"
+;    INCLUDE "EhBasic030.inc"
+    INCLUDE "EhBasic030.asm"
 
 ; these should immediately follow the global variables specified in the include file
 ;pixX1:  ds.w    1           ; temporary coordinate variable storage
@@ -30,14 +31,14 @@ vidBufEnd:  EQU vidBuf+vidBufLen-1  ; frame buffer end address
 fontData:   EQU $00250000
 
 ; in lieu of a working linker, copy necessary EhBASIC function addresses here
-LAB_GTWO:   EQU $00271760    
-LAB_SCGB:   EQU $00270DD4 
-LAB_GADB:   EQU $002717A2
-LAB_GTBY:   EQU $0027174C
-LAB_EVNM:   EQU $00270C6A
-LAB_EVIR:   EQU $0027112E
-LAB_1C01:   EQU $00270DD8
-LAB_XERR:   EQU $002701AA
+;LAB_GTWO:   EQU $00271760    
+;LAB_SCGB:   EQU $00270DD4 
+;LAB_GADB:   EQU $002717A2
+;LAB_GTBY:   EQU $0027174C
+;LAB_EVNM:   EQU $00270C6A
+;LAB_EVIR:   EQU $0027112E
+;LAB_1C01:   EQU $00270DD8
+;LAB_XERR:   EQU $002701AA
 
 
     ORG $00260000           ; this code will sit in ROM page 6
@@ -71,6 +72,7 @@ drawChar:   bra     drawChar1
 errUnimp:
     MOVEQ   #$2E,d7         ; error code $2E "Not implemented" error
     JMP     LAB_XERR        ; do error #d7, then warm start
+
 
 ;******************************************************************************
 ; setPixel

@@ -197,6 +197,8 @@ file_id	ds.l	1	; load/save file ID
 
 even			; dummy even value and zero pad byte
 
+; here we will save some pointers for common functions used by external calls
+
 prg_strt
 
 ; These values are set for BASIC running straight from ROM.

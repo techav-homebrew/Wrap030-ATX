@@ -116,16 +116,16 @@ ACIA_1	EQU	$00380000			; Console ACIA base address
 ; the following code is simulator specific, change to suit your system
 ; output character to the console from register d0.b
 
-;VEC_OUT
-;	MOVEM.L	A0/D1,-(A7)	; Save working registers
-;	LEA.L	ACIA_1,A0	; A0 points to console ACIA
-;TXNOTREADY
-;	MOVE.B	(A0),D1	; Read ACIA status
-;	BTST	#1,D1	; Test TDRE bit
-;	BEQ.S	TXNOTREADY	; Until ACIA Tx ready
-;	MOVE.B	D0,4(A0)	; Write character to send
-;	MOVEM.L	(A7)+,A0/D1	; Restore working registers
-;	RTS
+VEC_OUT
+	MOVEM.L	A0/D1,-(A7)	; Save working registers
+	LEA.L	ACIA_1,A0	; A0 points to console ACIA
+TXNOTREADY
+	MOVE.B	(A0),D1	; Read ACIA status
+	BTST	#1,D1	; Test TDRE bit
+	BEQ.S	TXNOTREADY	; Until ACIA Tx ready
+	MOVE.B	D0,4(A0)	; Write character to send
+	MOVEM.L	(A7)+,A0/D1	; Restore working registers
+	RTS
 
 ; This has been modified to time out after 300 attempts to read ACIA TDRE bit.
 ; If it's still not set, go ahead and output the character anyway. 
@@ -133,19 +133,19 @@ ACIA_1	EQU	$00380000			; Console ACIA base address
 ; Testing showed that it would still accept data to transmit, and the data
 ; will actually be transmitted properly. A delay of 300 cycles is enough for
 ; a byte to be output at 9600 bps with BASIC running from RAM at 12MHz. 
-VEC_OUT:
-	movem.l	A0/D1-D2,-(A7)	; Save working registers
-	lea.l	ACIA_1,A0		; A0 points to console ACIA
-	move.l	#300,D2			; loop counter
-TXNOTREADY:
-	move.b	(A0),D1			; Read ACIA status
-	BTST	#1,D1			; Test TDRE bit
-	BNE		TXCHAROUT		; if empty, skip ahead and output byte
-	dbra	D2,TXNOTREADY	; decrement loop counter & continue looping until done
-TXCHAROUT:
-	move.b	D0,4(A0)		; Write character to send
-	movem.L	(A7)+,A0/D1-D2	; Restore working registers
-	rts
+;VEC_OUT:
+;	movem.l	A0/D1-D2,-(A7)	; Save working registers
+;	lea.l	ACIA_1,A0		; A0 points to console ACIA
+;	move.l	#300,D2			; loop counter
+;TXNOTREADY:
+;	move.b	(A0),D1			; Read ACIA status
+;	BTST	#1,D1			; Test TDRE bit
+;	BNE		TXCHAROUT		; if empty, skip ahead and output byte
+;	dbra	D2,TXNOTREADY	; decrement loop counter & continue looping until done
+;TXCHAROUT:
+;	move.b	D0,4(A0)		; Write character to send
+;	movem.L	(A7)+,A0/D1-D2	; Restore working registers
+;	rts
 
 ;************************************************************************************
 ; input a character from the console into register d0
@@ -9226,6 +9226,6 @@ LAB_SMSG
 
 ;************************************************************************************
 
-	END	code_start
+;	END	code_start
 
 ;************************************************************************************

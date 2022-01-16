@@ -713,42 +713,65 @@ CON_I2:
 ; This is the device driver used by DCB2. Output in D0
 ; The output can be halted or suspended
 
+; 2022/01/15 techav
+; restoring original CON_OUT routine
+CON_OUT:
+        MOVEM.L A1/D1-D2,-(A7)          ; Save working registers
+        LEA 12(A0),A1                   ; Get pointer to ACIA from DCB
+        MOVE.L (A1),A1                  ; Get address of ACIA in A1
+        CLR.B 19(A0)                    ; Clear logical error in DCB
+CON_OT1:
+        MOVE.B (A1),D1                  ; Read ACIA status
+        BTST #0,D1                      ; Test RDRF bit (any input?)
+        BEQ.S CON_OT3                   ; If no input then test output status
+        MOVE.B aciaDatOffset(A1),D2     ; else read the input
+        AND.B #%01011111,D2             ; Strip parity and bit 5
+        CMP.B #WAIT,D2                  ; and test for a wait condition
+        BNE.S CON_OT3                   ; If not wait then ignore and test O/P
+CON_OT2:
+        MOVE.B (A1),D2                  ; Else read ACIA staus register
+        BTST #0,D2                      ; and poll ACIA until next char received
+        BEQ CON_OT2
+CON_OT3:
+        BTST #1,D1                      ; Repeat
+        BEQ CON_OT1                     ; until ACIA Tx ready
+        MOVE.B D1,18(A0)                ; Store status in DCB physical error
+        MOVE.B D0,aciaDatOffset(A1)     ; Transmit output
+        MOVEM.L (A7)+,A1/D1-D2          ; Restore working registers
+        RTS
+
 ; 2021/12/29 techav
 ; adding a timeout for checking the Tx Buf Empty bit,because I'm having
 ; some trouble with it never getting set. Register D3 will count down from 64.
 ; when we hit that point,just go ahead and write the character anyway.
 
-CON_OUT:
-;       MOVEM.L    A1/D1-D2,-(A7)      ; Save working registers
-        MOVEM.L A1/D1-D3,-(A7)         ; Save working registers
-        MOVEQ.L #64,D3                 ; set up timeout register
-        LEA 12(A0),A1                  ; Get pointer to ACIA from DCB
-        MOVE.L (A1),A1                 ; Get address of ACIA in A1
-        CLR.B 19(A0)                   ; Clear logical error in DCB
-CON_OT1:
-        MOVE.B (A1),D1                 ; Read ACIA status
-        BTST #0,D1                     ; Test RDRF bit (any input?)
-        BEQ.S CON_OT3                  ; If no input then test output status
-        MOVE.B aciaDatOffset(A1),D2    ; Else read the input
-        AND.B #%01011111,D2            ; Strip parity and bit 5
-        CMP.B #WAIT,D2                 ; and test for a wait condition
-        BNE.S CON_OT3                  ; If not wait then ignore and test O/P
-CON_OT2:
-        MOVE.B (A1),D2                 ; Else read ACIA status register
-        BTST #0,D2                     ; and poll ACIA until next char received
-        BEQ CON_OT2
-CON_OT3:
-;       BTST #1,D1                     ;Repeat
-;       BEQ CON_OT1                    ;until ACIA Tx ready
-        BTST #1,D1                     ; check if ACIA Tx register is empty
-        BNE.S CON_OT4                  ; if empty,skip ahead and continue
-        DBRA D3,CON_OT1                ; decrement loop counter and continue if not empty
-CON_OT4:
-        MOVE.B D1,18(A0)               ; Store status in DCB physical error
-        MOVE.B D0,aciaDatOffset(A1)    ; Transmit output
-;       MOVEM.L (A7)+,A1/D1-D2         ; Restore working registers
-        MOVEM.L (A7)+,A1/D1-D3         ; Restore working registers
-        RTS
+;CON_OUT:
+;        MOVEM.L A1/D1-D3,-(A7)         ; Save working registers
+;        MOVEQ.L #64,D3                 ; set up timeout register
+;        LEA 12(A0),A1                  ; Get pointer to ACIA from DCB
+;        MOVE.L (A1),A1                 ; Get address of ACIA in A1
+;        CLR.B 19(A0)                   ; Clear logical error in DCB
+;CON_OT1:
+;        MOVE.B (A1),D1                 ; Read ACIA status
+;        BTST #0,D1                     ; Test RDRF bit (any input?)
+;        BEQ.S CON_OT3                  ; If no input then test output status
+;        MOVE.B aciaDatOffset(A1),D2    ; Else read the input
+;        AND.B #%01011111,D2            ; Strip parity and bit 5
+;        CMP.B #WAIT,D2                 ; and test for a wait condition
+;        BNE.S CON_OT3                  ; If not wait then ignore and test O/P
+;CON_OT2:
+;        MOVE.B (A1),D2                 ; Else read ACIA status register
+;        BTST #0,D2                     ; and poll ACIA until next char received
+;        BEQ CON_OT2
+;CON_OT3:
+;        BTST #1,D1                     ; check if ACIA Tx register is empty
+;        BNE.S CON_OT4                  ; if empty,skip ahead and continue
+;        DBRA D3,CON_OT1                ; decrement loop counter and continue if not empty
+;CON_OT4:
+;        MOVE.B D1,18(A0)               ; Store status in DCB physical error
+;        MOVE.B D0,aciaDatOffset(A1)    ; Transmit output
+;        MOVEM.L (A7)+,A1/D1-D3         ; Restore working registers
+;        RTS
 
 ; ***************************************************************************
 
