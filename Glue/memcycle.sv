@@ -25,7 +25,7 @@ module memcycle (
 );
 
 // define state machine states
-parameter
+/*parameter
     S0  =   0,  // Idle state
     S1  =   1,  // Sync Active state
     S2  =   2,  // Sync Term state
@@ -35,14 +35,39 @@ parameter
     S6  =   6,  // Async Term state
     S7  =   7,  // Berr state
     S8  =   8,  // Mode Switch state
-    S15 =  15;  // Cycle End state
-logic [3:0] timingState;
+    S9  =   9,  // Vid Active state
+    S10 =  10,  // Vid Wait 1 state
+    S11 =  11,  // Vid Wait 2 state
+    S12 =  12,  // Vid Wait 3 state
+    S13 =  13,  // Vid Term state
+    S15 =  15;  // Cycle End state*/
+parameter 
+    sIDLE   =    0, // Idle state
+    sSACTV  =    1, // Sync active state
+    sSWAT1  =    2, // Sync wait 1 state
+    sSTERM  =    3, // Sync term state
+    sAACTV  =    4, // Async active state
+    sAWAT1  =    5, // Async wait 1 state
+    sAWAT2  =    6, // Async wait 2 state
+    sAWAT3  =    7, // Async wait 3 state
+    sAWAT4  =    8, // Async wait 4 state
+    sATERM  =    9, // Async term state
+    sVACTV  =   10, // Video active state
+    sVWAT1  =   11, // Video wait 1 state
+    sVWAT2  =   12, // Video wait 2 state
+    sVWAT3  =   13, // Video wait 3 state
+    sVTERM  =   14, // Video term state
+    sBERR   =   15, // Bus error state
+    sMODE   =   16, // Mode switch state
+    sEND    =   17; // Cycle end state
+logic [4:0] timingState;
 
 reg nRamCEinternal,
     nRomCEinternal,
     nMemRDinternal,
     nMemWRinternal,
     nDSACKinternal,
+    nDSACK16internal,
     nSTERMinternal,
     nBERRinternal,
     memOverlay;     // 0 on reset; 1 enables read RAM page 0
@@ -50,6 +75,7 @@ reg nRamCEinternal,
 wire    ramSel,
         romSel,
         berrSel,
+        vidSel,
         modeSel;
 
 assign nRomCE = nRomCEinternal;
@@ -58,7 +84,8 @@ assign nMemWr = nMemWRinternal;
 assign nSterm = nSTERMinternal;
 assign nBerr = nBERRinternal;
 
-assign nDsack[1] = 1;
+//assign nDsack[1] = 1;
+assign nDsack[1] = nDSACK16internal;
 assign nDsack[0] = nDSACKinternal;
 
 // RAM chip enable signals
@@ -99,7 +126,7 @@ always_comb begin
         end else if(addrSel == 0 && memOverlay == 0 && RnW) begin
             // on reset, reads to page 0 go to ROM, not RAM
             ramSel <= 0;
-        end else if(addrSel < 4) begin
+        end else if(addrSel < 3) begin
             ramSel <= 1;
         end else begin
             ramSel <= 0;
@@ -126,13 +153,31 @@ always_comb begin
     end
 end
 
+// CPU is driving an address that maps to a 16-bit video port
+/*always_comb begin
+    if(!nAS && !addr31 && addrSel == 5) begin
+        vidSel <= 1;
+    end else begin
+        vidSel <= 0;
+    end
+end*/
+// CPU is driving an address that maps to the video port (RAM page 3)
+always_comb begin
+    if(!nAS && !addr31 && addrSel == 3) begin
+        vidSel <= 1;
+    end else begin
+        vidSel <= 0;
+    end
+end
+
 // CPU is driving an address that doesn't map to anything
 always_comb begin
     if(!nAS && !addr31) begin
         if(addrSel == 5) begin
             // there is nothing mapped here
             berrSel <= 1;
-        end else if (addrSel == 6 && RnW) begin
+        end else
+        if (addrSel == 6 && RnW) begin
             // no reads are allowed on page 6
             berrSel <= 1;
         end else begin
@@ -154,7 +199,283 @@ always_comb begin
     end
 end
 
-// primary timing state machine
+// Primary timing state machine
+always @(posedge sysClk or posedge nAS or negedge nReset) begin
+    if(!nReset) begin
+        memOverlay <= 0;            // 0 on reset, 1 enables read RAM page 0
+    end else if(nAS) begin
+        timingState <= sIDLE;
+        nRamCEinternal <= 1;
+        nRomCEinternal <= 1;
+        nMemRDinternal <= 1;
+        nMemWRinternal <= 1;
+        nDSACKinternal <= 1;
+        nSTERMinternal <= 1;
+        nBERRinternal <= 1;
+    end else begin
+        case(timingState)
+            sIDLE : begin
+                // Idle state.
+                // Wait for memory cycle to begin
+                if(ramSel) timingState <= sSACTV;
+                else if(romSel) timingState <= sAACTV;
+                else if(berrSel) timingState <= sBERR;
+                else if(modeSel) timingState <= sMODE;
+                else if(vidSel) timingState <= sVACTV;
+                else timingState <= sIDLE;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sSACTV: begin
+                // Sync Active state
+                // Always move to sWAT1
+                timingState <= sSWAT1;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= ~RnW;
+                nMemWRinternal <= RnW;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sSWAT1: begin
+                // Sync Wait 1 state
+                // Always move to sSTERM
+                timingState <= sSTERM;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sSTERM: begin
+                // Sync Term state
+                // Always move to sEND
+                timingState <= sEND;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 0;
+                nBERRinternal <= 1;
+            end
+            sAACTV: begin
+                // Async Active state
+                // Always move to sAWAIT1
+                timingState <= sAWAT1;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 0;
+                nMemRDinternal <= ~RnW;
+                nMemWRinternal <= RnW;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sAWAT1: begin
+                // Async wait 1 state
+                // Always move to sAWAT2
+                timingState <= sAWAT2;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 0;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sAWAT2: begin
+                // Async wait 2 state
+                // Always move to sAWAT3
+                timingState <= sAWAT3;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 0;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sAWAT3: begin
+                // Async wait 3 state
+                // Always move to sAWAT4
+                timingState <= sAWAT4;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 0;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sAWAT4: begin
+                // Async wait 4 state
+                // Always move to sATERM
+                timingState <= sATERM;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 0;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sATERM: begin
+                // Async Term state
+                // Always move to sEND
+                timingState <= sEND;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 0;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 0;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sVACTV: begin
+                // Video Active state
+                // Always move to sVWAT1
+                timingState <= sVWAT1;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= ~RnW;
+                nMemWRinternal <= RnW;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sVWAT1: begin
+                // Video Wait 1 state
+                // Always move to sVWAT2
+                timingState <= sVWAT2;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sVWAT2: begin
+                // Video Wait 2 state
+                // Always move to sVWAT3
+                timingState <= sVWAT3;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sVWAT3: begin
+                // Video Wait 3 state
+                // Always move to sVTERM
+                timingState <= sVTERM;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            sVTERM: begin
+                // Video Term state
+                // Always move to sEND
+                timingState <= sEND;
+                timingState <= sEND;
+                nRamCEinternal <= 0;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 0;
+                nBERRinternal <= 1;
+            end
+            sBERR : begin
+                // Bus Error state
+                // Always move to sEND
+                timingState <= sEND;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 0;
+            end
+            sMODE : begin
+                // Mode Switch state
+                // Always move to sEND
+                timingState <= sEND;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 0;
+                nBERRinternal <= 1;
+                memOverlay <= ~memOverlay;
+            end
+            sEND  : begin
+                // Cycle End state
+                // Wait for CPU to deassert nAS
+                if(nAS) timingState <= sIDLE;
+                else timingState <= sEND;
+                // hold all signals at previous level except Memory Write
+                nRamCEinternal <= nRamCEinternal;
+                nRomCEinternal <= nRomCEinternal;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= 1;    // force high early
+                nDSACKinternal <= nDSACKinternal;
+                nDSACK16internal <= nDSACK16internal;
+                nSTERMinternal <= nSTERMinternal;
+                nBERRinternal <= nBERRinternal;
+            end
+            default: begin
+                // How did we end up here?
+                timingState <= sIDLE;
+                // hold all signals at previous level
+                nRamCEinternal <= nRamCEinternal;
+                nRomCEinternal <= nRomCEinternal;
+                nMemRDinternal <= nMemRDinternal;
+                nMemWRinternal <= nMemWRinternal;
+                nDSACKinternal <= nDSACKinternal;
+                nDSACK16internal <= nDSACK16internal;
+                nSTERMinternal <= nSTERMinternal;
+                nBERRinternal <= nBERRinternal;
+            end
+        endcase
+    end
+end
+
+
+/*// primary timing state machine
 always @(posedge sysClk or posedge nAS or negedge nReset) begin
     if(!nReset) begin
         memOverlay <= 0;            // 0 on reset; 1 enables read RAM page 0
@@ -177,12 +498,14 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 else if(romSel) timingState <= S3;
                 else if(berrSel) timingState <= S7;
                 else if(modeSel) timingState <= S8;
+                else if(vidSel) timingState <= S9;
                 else timingState <= S0;
                 nRamCEinternal <= 1;
                 nRomCEinternal <= 1;
                 nMemRDinternal <= 1;
                 nMemWRinternal <= 1;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 1;
             end
@@ -195,6 +518,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= ~RnW;
                 nMemWRinternal <= RnW;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 1;
             end
@@ -207,6 +531,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= nMemRDinternal;
                 nMemWRinternal <= nMemWRinternal;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 0;
                 nBERRinternal <= 1;
             end
@@ -219,6 +544,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= ~RnW;
                 nMemWRinternal <= RnW;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 1;
             end
@@ -231,6 +557,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= nMemRDinternal;
                 nMemWRinternal <= nMemWRinternal;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 1;
             end
@@ -243,6 +570,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= nMemRDinternal;
                 nMemWRinternal <= nMemWRinternal;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 1;
             end
@@ -255,6 +583,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= nMemRDinternal;
                 nMemWRinternal <= nMemWRinternal;
                 nDSACKinternal <= 0;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 1;
             end
@@ -267,6 +596,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= 1;
                 nMemWRinternal <= 1;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 1;
                 nBERRinternal <= 0;
             end
@@ -279,9 +609,75 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= 1;
                 nMemWRinternal <= 1;
                 nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
                 nSTERMinternal <= 0;
                 nBERRinternal <= 1;
                 memOverlay <= ~memOverlay;
+            end
+            S9 : begin
+                // Vid Active state
+                // Always move to S10
+                timingState <= S10;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            S10: begin
+                // Vid Wait 1 state
+                // Always move to S11
+                timingState <= S11;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            S11: begin
+                // Vid Wait 2 state
+                // Always move to S12
+                timingState <= S12;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            S12: begin
+                // Vid Wait 3 state
+                // Always move to S13
+                timingState <= S13;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 1;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
+            end
+            S13: begin
+                // Vid Term state
+                // Always move to S15
+                timingState <= S15;
+                nRamCEinternal <= 1;
+                nRomCEinternal <= 1;
+                nMemRDinternal <= 1;
+                nMemWRinternal <= 1;
+                nDSACKinternal <= 1;
+                nDSACK16internal <= 0;
+                nSTERMinternal <= 1;
+                nBERRinternal <= 1;
             end
             S15: begin
                 // Cycle End state
@@ -294,6 +690,7 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= nMemRDinternal;
                 nMemWRinternal <= 1;    // force high early
                 nDSACKinternal <= nDSACKinternal;
+                nDSACK16internal <= nDSACK16internal;
                 nSTERMinternal <= nSTERMinternal;
                 nBERRinternal <= nBERRinternal;
             end
@@ -306,11 +703,12 @@ always @(posedge sysClk or posedge nAS or negedge nReset) begin
                 nMemRDinternal <= nMemRDinternal;
                 nMemWRinternal <= nMemWRinternal;
                 nDSACKinternal <= nDSACKinternal;
+                nDSACK16internal <= nDSACK16internal;
                 nSTERMinternal <= nSTERMinternal;
                 nBERRinternal <= nBERRinternal;
             end
         endcase
     end
 end
-
+*/
 endmodule
