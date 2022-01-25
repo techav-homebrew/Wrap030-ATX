@@ -4,13 +4,6 @@
 ;    INCLUDE "EhBasic030.inc"
     INCLUDE "EhBasic030.asm"
 
-; these should immediately follow the global variables specified in the include file
-;pixX1:  ds.w    1           ; temporary coordinate variable storage
-;pixY1:  ds.w    1
-;pixX2:  ds.W    1
-;pixY2:  ds.w    1
-;pixDat: ds.b    1           ; temporary video data storage
-;dumbyte: ds.B   1           ; word align
 ;******: Instead of global variables, we'll need to use the stack.
 pixE2:      EQU 20
 pixErr:     EQU 18
@@ -29,17 +22,6 @@ vidBufLen:  EQU 21888       ; frame buffer length
 vidBufEnd:  EQU vidBuf+vidBufLen-1  ; frame buffer end address
 
 fontData:   EQU $00250000
-
-; in lieu of a working linker, copy necessary EhBASIC function addresses here
-;LAB_GTWO:   EQU $00271760    
-;LAB_SCGB:   EQU $00270DD4 
-;LAB_GADB:   EQU $002717A2
-;LAB_GTBY:   EQU $0027174C
-;LAB_EVNM:   EQU $00270C6A
-;LAB_EVIR:   EQU $0027112E
-;LAB_1C01:   EQU $00270DD8
-;LAB_XERR:   EQU $002701AA
-
 
     ORG $00260000           ; this code will sit in ROM page 6
 ; start with a jump table
@@ -265,35 +247,91 @@ scrollVXneg:
 ; drawChar
 ;   prints a single character at a given position on screen
 ; CALL DRAWCHAR X,Y,C
+;
+; Video buffer offset word (add to vidBuf pointer)
+; | | Y chr row | row | X chr col |
+; |_|_ _ _ _ _ _|_ _ _|_ _ _ _ _ _|
+;
+; Font data offset word (add to font pointer)
+; |           | ASCII char  | row |
+; |_ _ _ _ _ _|_ _ _ _ _ _ _|_ _ _|
+;
 drawChar1:
-    movem.l D0-D2/A1,-(SP)  ; save working registers
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    andi.w  #$3F,D0         ; mask out invalid X values
-    move.w  D0,-(SP)        ; push X value to stack for later use
-    jsr     LAB_EVNM        ; evaluate expression & check it's numeric
-    jsr     LAB_EVIR        ; evaluate integer expression
-    andi.w  #$3F,D0         ; mask out invalid values
-    moveq   #9,D1           ; get ready to shift Y into position
-    lsl.w   D1,D0           ; shift Y position for offset
-    move.w  (SP),D1         ; pop X value off stack
-    or.w    D1,D0           ; combine X & Y positions into pointer offset
-    move.w  D0,(SP)         ; push to stack to save for later
-                            ; (SP) is vidbuffer offset for specified position
+    movem.l A1/D0-D3,-(SP)  ; save working registers
+    ; get X value from BASIC line
+    jsr     LAB_EVNM        ; eval integer expression into D0
+    jsr     LAB_EVIR        ;
+    move.w  D0,-(SP)        ; push X to stack
+    ; get Y value from BASIC line
     jsr     LAB_1C01        ; scan for ","
-    jsr     LAB_GTBY        ; get byte parameter in D0 (char to print)
-    eor.L   D1,D1           ; clear D1
-    move.b  D0,D1           ; copy char into D1
-    lsl.w   #3,D1           ; shift into offset location
-                            ; D1 is font data offset to specified character
-    lea     fontData,A0     ; get pointer to font data
-    lea     vidBuf,A1       ; get pointer to video buffer
-    move.w  (SP)+,D0        ; get vidbuffer offset
-                            ; D0 is vidbuffer offset for specified position
-    FOR D2 = 0 TO 7 DO.S
-        move.b  0(A0,D1.w),$000(A1,D0.w)    ; copy video data
-        addq.w  #1,D1                       ; increment font offset
-        addi.w  #$40,D0                     ; increment video offset
-    ENDF
-    movem.l (SP)+,D0-D2/A1  ; restore working registers
+    jsr     LAB_EVNM        ; evaluate integer expression into D0
+    jsr     LAB_EVIR        ;
+    move.w  D0,-(SP)        ; push Y to stack
+    ; get Char from BASIC line
+    jsr     LAB_1C01        ; scan for ","
+    jsr     LAB_EVNM        ; evaluate integer expression into DO
+    jsr     LAB_EVIR        ; char to print in D0
+    ; assemble video buffer offset
+    move.w  (SP)+,D1        ; Y value in D1
+    move.w  (SP)+,D2        ; X value in D2
+    andi.w  #$3F,D1         ; mask out invalid values
+    andi.w  #$3F,D2         ;
+    lsl.w   #$5,D1          ; shift Y value into position
+    lsl.w   #$4,D1          ; (multiply by 512)
+    or.w    D2,D1           ; combine X & Y values into D1
+    eor.w   #1,D1           ; flip low bit
+    ; assemble character font data offset
+    lsl.w   #3,D0           ; shift char into offset location
+    ; fetch pointers
+    movea.l #fontData,A0    ; get pointer to font data
+    movea.l #vidBuf,A1      ; get pointer to video buffer
+    ; main draw loop
+    moveq   #7,D2           ; set up loop counter
+.drawCharLp:
+    move.b  0(A0,D0.w),D3   ; fetch font data
+    move.b  D3,0(A1,D1.w)   ; write font data to video buffer
+    addq.w  #1,D0           ; increment font data offset
+    addi.w  #$40,D1         ; increment video buffer offset
+    dbra    D2,.drawCharLp  ; continue loop until expired
+    ; end character draw routine
+    movem.l (SP)+,A1/D0-D3  ; restore working registers
     rts
+
+
+
+; Temporary Output Routines
+; OUT1X    = print one     hexadecimal character
+; OUT2X    = print two     hexadecimal characters
+; OUT4X    = print four    hexadecimal characters
+; OUT8X    = print eight   hexadecimal characters
+; In each case,the data to be printed is in D0
+
+OUT1X:
+        MOVE.B D0,-(A7)                ; Save D0
+        AND.B #$0F,D0                  ; Mask off MS nybble
+        ADD.B #$30,D0                  ; Convert to ASCII
+        CMP.B #$39,D0                  ; ASCII = HEX + $30
+        BLS.S OUT1X1                   ; If ASCII <= $39 then print and exit
+        ADD.B #$07,D0                  ; Else ASCII: = HEX + 7
+OUT1X1:
+        JSR VEC_OUT                    ; Print the character
+        MOVE.B (A7)+,D0                ; Restore D0
+        RTS
+
+OUT2X:
+        ROR.B #4,D0                    ; Get MS nybble in LS position
+        BSR OUT1X                      ; Print MS nybble
+        ROL.B #4,D0                    ; Restore LS nybble
+        BRA OUT1X                      ; Print LS nybble and return
+
+OUT4X:
+        ROR.W #8,D0                    ; Get MS byte in LS position
+        BSR OUT2X                      ; Print MS byte
+        ROL.W #8,D0                    ; Restore LS byte
+        BRA OUT2X                      ; Print LS byte and return
+
+OUT8X:
+        SWAP D0                        ; Get MS word in LS position
+        BSR OUT4X                      ; Print MS word
+        SWAP D0                        ; Restore LS word
+        BRA OUT4X                      ; Print LS word and return
