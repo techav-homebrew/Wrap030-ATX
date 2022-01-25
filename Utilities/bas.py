@@ -23,6 +23,14 @@ except Exception as e:
     print("Error opening file: " + str(e))
     exit()
 
+# send a break in case BASIC is currently running a program
+ser.write(bytes('\x03','ascii'))
+time.sleep(1)
+
+# tell BASIC to start a new program
+ser.write(bytes('NEW\r\n','ascii'))
+time.sleep(1)
+
 for line in f.readlines():
     ser.write(bytes(line.rstrip('\n')+'\r\n','ascii'))
     print(line)
