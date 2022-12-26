@@ -3,7 +3,8 @@
  * techav
  * 2022-12-16
  ******************************************************************************
- * 
+ * 2022-12-26 changed vram address calculation to an address counter to reduce
+ *            macrocell utilization
  *****************************************************************************/
 
 module vidGen (
@@ -11,7 +12,7 @@ module vidGen (
     input   wire                pixClk,     // primary video pixel clock    83
     input   wire                nCpuCE,     // cpu bus chip enable signal   84
     output  reg                 nVramWr,    // vram bus write strobe        12
-    output  reg  [14:0]         vramAddr,   // vram bus address signals
+    output  wire [14:0]         vramAddr,   // vram bus address signals
     input   wire                nCpuDS,     // cpu bus data strobe          6
     inout   reg                 nCpuDSACK,  // cpu data strobe acknowledge  5
     output  reg                 nVramRd,    // vram bus read strobe         22
@@ -104,6 +105,40 @@ end
 // video periods, or any time during blanking periods 
 reg [7:0] vReadData;    // store video data read from VRAM
 reg cpuReadInProgress;  // keep track of when we're actively servicing a CPU read request
+reg [15:0] vReadAddr;   // VRAM video address counter
+
+// video address counter
+always @(negedge pixClk or negedge nReset) begin
+    if(!nReset) begin
+        vReadAddr <= 0;
+    end else begin
+        // handle incrementing the VRAM read address
+        if(hCount < H_VIS && vCount < V_VIS && hCount[1:0] == 2'h3) begin
+            // increment address every video read cycle during active video
+            vReadAddr <= vReadAddr + 16'h0001;
+        end else if(hCount == H_VIS && !hCount[0]) begin
+            // in modes 0 & 2, subtract 160 from video read address to repeat lines
+            vReadAddr <= vReadAddr - 160;
+        end else if(vCount >= V_VIS) begin
+            // reset video read address during V Blanking period
+            vReadAddr <= 0;
+        end
+    end
+end
+
+// video address pass-through
+always @(negedge pixClk) begin
+    // To keep things simple, the address output to VRAM will default to the 
+    // address from the CPU except when fetching video from VRAM.
+    // This is probably a bad idea, but it's easy.
+    if(hCount < H_VIS && vCount < V_VIS && hCount[1:0] == 2'h0) begin
+        vramAddr <= vReadAddr[14:0];
+    end else begin
+        vramAddr <= cpuAddr[14:0];
+    end
+end
+
+// VRAM sequencer
 always @(negedge pixClk or negedge nReset) begin
     if(!nReset) begin
         // System reset, deassert all CPU & VRAM bus signals
@@ -116,6 +151,7 @@ always @(negedge pixClk or negedge nReset) begin
         cpuData <= 8'bZZZZZZZZ;
         nCpuDSACK <= 1'bZ;
     end else begin
+        
         // handle fetching video data from VRAM
         if(hCount < H_VIS && vCount < V_VIS && hCount[1:0] == 2'h0) begin
             // state 0 - set up VRAM bus for video data read
@@ -131,14 +167,7 @@ always @(negedge pixClk or negedge nReset) begin
             if(rVidMode[0]) begin
                 // only one frame buffer if rVidMode[0] is set
                 // no line doubling if rVidMode[0] is set
-                vramAddr <= (vCount*160)+(hCount/4);
-                // Below is the equivalent of the same equation, using only
-                // bit shifts and addition. It compiles the same.
-                // vramAddr <= ((vCount<<7)+(vCount<<5))+(hCount>>2);
-
-                // this is the threshold where we cross over the 32kiB
-                // boundary into the second VRAM chip
-                if(vCount>204 || (vCount==204 && hCount>508)) begin
+                if(vReadAddr[15]) begin
                     nVramCE0 <= 1;
                     nVramCE1 <= 0;
                 end else begin
@@ -149,11 +178,6 @@ always @(negedge pixClk or negedge nReset) begin
                 // two frame buffers if rVidMode[0] is clear
                 // select active frame buffer with rBufSel
                 // read & display each line twice if rVidMode[0] is clear
-                vramAddr <= ((vCount/2)*160)+(hCount/4);
-                // Below is the equivalent of the same equation, but using only
-                // bit shifts, logical AND, and addition. It compiles the same.
-                // vramAddr <= (((vCount & 10'h3FE)<<6)+((vCount & 10'h3FE)<<4))+(hCount>>2);
-
                 if(rBufSel) begin
                     nVramCE0 <= 1;
                     nVramCE1 <= 0;
@@ -183,7 +207,6 @@ always @(negedge pixClk or negedge nReset) begin
                 nVramRd <= 1;
                 nVramWr <= 1;
                 vramData <= 8'bZZZZZZZZ;
-                vramAddr <= 0;
                 // and don't forget to end the cpu read cycle
                 cpuReadInProgress <= 0;
             end else if(!nCpuCE && !nCpuDS) begin
@@ -197,7 +220,6 @@ always @(negedge pixClk or negedge nReset) begin
                     nVramRd <= 1;
                     nVramWr <= 1;
                     vramData <= 8'bZZZZZZZZ;
-                    vramAddr <= 0;
                     if(!cpuRnW) begin
                         // CPU register write cycle
                         cpuData <= 8'bZZZZZZZZ;
@@ -249,7 +271,6 @@ always @(negedge pixClk or negedge nReset) begin
                         // feed the CPU data & address to VRAM
                         cpuData <= 8'bZZZZZZZZ;
                         vramData <= cpuData;
-                        vramAddr <= cpuAddr[14:0];
                         // and finally, let the CPU know we're done with this cycle
                         nCpuDSACK <= 1'b0;
                     end else begin
@@ -271,7 +292,6 @@ always @(negedge pixClk or negedge nReset) begin
                                 nVramCE1 <= 1;
                             end
                             // feed the CPU address to VRAM
-                            vramAddr <= cpuAddr[14:0];
                             vramData <= 8'bZZZZZZZZ;
                             cpuData <= 8'bZZZZZZZZ;
                             // and finally, let the CPU know we're not done yet
@@ -285,7 +305,6 @@ always @(negedge pixClk or negedge nReset) begin
                             nVramRd <= 1;
                             nVramWr <= 1;
                             vramData <= 8'bZZZZZZZZ;
-                            vramAddr <= 0;
                             cpuData <= 8'bZZZZZZZZ;
                             nCpuDSACK <= 1'bZ;
                         end
@@ -298,7 +317,6 @@ always @(negedge pixClk or negedge nReset) begin
                 nVramRd <= 1;
                 nVramWr <= 1;
                 vramData <= 8'bZZZZZZZZ;
-                vramAddr <= 0;
                 cpuData <= 8'bZZZZZZZZ;
                 nCpuDSACK <= 1'bZ;
             end
@@ -357,7 +375,7 @@ always @(posedge pixClk or negedge nReset) begin
                 endcase
             end else begin
                 // modes 1 & 0 are 4bpp RGBI with column doubling
-                if(!hCount[1]) begin
+                if(hCount[1]) begin
                     // output bits [7:4]
                     vidOut <= vReadData[7:4];
                 end else begin
