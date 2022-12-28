@@ -4,7 +4,11 @@
  * 2022-12-16
  ******************************************************************************
  * 2022-12-26 changed vram address calculation to an address counter to reduce
- *            macrocell utilization
+ *            macrocell utilization.
+ * 2022-12-27 added logic to deassert nCpuDSACK when the CPU deasserts either
+ *            nCpuDS or nCpuCE, to reduce the risk of interfering with the
+ *            CPU's next bus transaction, as recommended in Section 7 of the
+ *            68030 manual.
  *****************************************************************************/
 
 module vidGen (
@@ -118,7 +122,7 @@ always @(negedge pixClk or negedge nReset) begin
             vReadAddr <= vReadAddr + 16'h0001;
         end else if(hCount == H_VIS && !hCount[0]) begin
             // in modes 0 & 2, subtract 160 from video read address to repeat lines
-            vReadAddr <= vReadAddr - 160;
+            vReadAddr <= vReadAddr - 16'd160;
         end else if(vCount >= V_VIS) begin
             // reset video read address during V Blanking period
             vReadAddr <= 0;
@@ -139,6 +143,7 @@ always @(negedge pixClk) begin
 end
 
 // VRAM sequencer
+reg cpuACK; // keep track of when we need to assert the CPU DS Acknowledge signal
 always @(negedge pixClk or negedge nReset) begin
     if(!nReset) begin
         // System reset, deassert all CPU & VRAM bus signals
@@ -149,7 +154,8 @@ always @(negedge pixClk or negedge nReset) begin
         nVramWr <= 1;
         vramData <= 8'bZZZZZZZZ;
         cpuData <= 8'bZZZZZZZZ;
-        nCpuDSACK <= 1'bZ;
+        //nCpuDSACK <= 1'bZ;
+        cpuACK <= 0;
     end else begin
         
         // handle fetching video data from VRAM
@@ -158,7 +164,8 @@ always @(negedge pixClk or negedge nReset) begin
             // this is the beginning of an active video VRAM fetch.
             // deassert all CPU bus signals
             cpuData <= 8'bZZZZZZZZ;
-            nCpuDSACK <= 1'bZ;
+            //nCpuDSACK <= 1'bZ;
+            cpuACK <= 0;
             // assert VRAM read strobe
             nVramRd <= 0;
             // set VRAM data bus to high-Z for reading
@@ -200,7 +207,8 @@ always @(negedge pixClk or negedge nReset) begin
             if(cpuReadInProgress == 1) begin
                 // we already have a CPU VRAM read cycle in progress, finish it.
                 cpuData <= vramData;
-                nCpuDSACK <= 1'b0;
+                //nCpuDSACK <= 1'b0;
+                cpuACK <= 1;
                 // we're done with VRAM, so deassert its signals
                 nVramCE0 <= 1;
                 nVramCE1 <= 1;
@@ -251,7 +259,8 @@ always @(negedge pixClk or negedge nReset) begin
                         cpuData[7:6] <= 2'b11;
                     end
                     // and finally, let the CPU know we're done with this cycle
-                    nCpuDSACK <= 1'b0;
+                    //nCpuDSACK <= 1'b0;
+                    cpuACK <= 1;
                 end else begin
                     // cpu VRAM cycle
                     if(!cpuRnW) begin
@@ -272,7 +281,8 @@ always @(negedge pixClk or negedge nReset) begin
                         cpuData <= 8'bZZZZZZZZ;
                         vramData <= cpuData;
                         // and finally, let the CPU know we're done with this cycle
-                        nCpuDSACK <= 1'b0;
+                        //nCpuDSACK <= 1'b0;
+                        cpuACK <= 1;
                     end else begin
                         // cpu VRAM read cycle, check if we have time
                         //if(hCount == 2'h1 || hCount == 2'h2) begin
@@ -295,7 +305,8 @@ always @(negedge pixClk or negedge nReset) begin
                             vramData <= 8'bZZZZZZZZ;
                             cpuData <= 8'bZZZZZZZZ;
                             // and finally, let the CPU know we're not done yet
-                            nCpuDSACK <= 1'bZ;
+                            //nCpuDSACK <= 1'bZ;
+                            cpuACK <= 0;
                         end else begin
                             // we don't have time for a read cycle, wait until we have time
                             cpuReadInProgress <= 0;
@@ -306,7 +317,8 @@ always @(negedge pixClk or negedge nReset) begin
                             nVramWr <= 1;
                             vramData <= 8'bZZZZZZZZ;
                             cpuData <= 8'bZZZZZZZZ;
-                            nCpuDSACK <= 1'bZ;
+                            //nCpuDSACK <= 1'bZ;
+                            cpuACK <= 0;
                         end
                     end
                 end
@@ -318,12 +330,21 @@ always @(negedge pixClk or negedge nReset) begin
                 nVramWr <= 1;
                 vramData <= 8'bZZZZZZZZ;
                 cpuData <= 8'bZZZZZZZZ;
-                nCpuDSACK <= 1'bZ;
+                //nCpuDSACK <= 1'bZ;
+                cpuACK <= 0;
             end
         end
     end
 end
 
+// only assert CPU DS Acknowledge for as long as the CPU asserts DS & CE
+always_comb begin
+    if(cpuACK && !nCpuDS && !nCpuCE) begin
+        nCpuDSACK <= 1'b0;
+    end else begin
+        nCpuDSACK <= 1'bZ;
+    end
+end
 
 // this is where we'll actually output the video data we've fetched from VRAM
 always @(posedge pixClk or negedge nReset) begin
