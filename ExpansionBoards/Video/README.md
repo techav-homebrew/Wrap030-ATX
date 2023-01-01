@@ -32,6 +32,7 @@ The Video Board has a single 8-bit configuration register at CPU address 0xffff:
   - Selects the active frame buffer in modes 0 & 2
   - 1: Active Frame Buffer starts at 0x8000 (VRAM Chip 1)
   - 0: Active Frame Buffer starts at 0x0000 (VRAM Chip 0)
+  - Changes to the active frame buffer selection take effect during the next vertical blanking period
 - Mode:
   - Selects the current video mode
   - 00: 320x200 4bpp RGBI
