@@ -25,19 +25,21 @@ module mezGlue (
     input   wire                nIdeIO16,   // ide 16-bit signal            9
     output  wire                nIdeCS3,    // ide CE3 signal               8
     output  wire                nIdeCS1,    // ide CE1 signal               6
-    output  wire                nIdeCE,     // ide enable signal            4
+    input   wire                nIdeCE,     // ide enable signal            4
     output  wire                nFpuCE,     // fpu enabale signal           33
-    input   wire                nFpuSense,  // fpu presence detect signal   37
+    input   wire                nFpuSense   // fpu presence detect signal   37
 );
 
 /*****************************************************************************/
 // FPU logic
-always_comb begin
-    // this is asynchronous because of timing requirements which require the
-    // FPU-CE signal to be asserted before the falling edge of !AS, which we
-    // can't really do while synchronized to the CPU clock or the slower
-    // FPU clock
-    if(cpuFS == 2'b11 && addrSel == 7'b0010001) nFpuCE <= 0;
+// this is synchronous with the rising edge of the system clock to ensure there
+// is enough setup time between the CPU asserting nAS (on the falling edge) and
+// us asserting the nFpuCE. There is not enough time to try to assert nFpuCE 
+// before the CPU asserts nAS and still meet the setup time requirements for
+// the FPU, so we'll have to use a late chip select.
+always @(posedge sysClk or posedge nAS) begin
+    if(nAS) nFpuCE <= 1;
+    else if(cpuFC == 2'b11 && addrSel == 7'b0010001 && !nAS) nFpuCE <= 0;
     else nFpuCE <= 1;
 end
 
@@ -46,7 +48,7 @@ reg fpuBerr;
 always @(posedge sysClk or negedge nReset) begin
     if(!nReset) begin
         fpuBerr <= 1'b0;
-    end else if(cpuFS == 2'b11 && addrSel == 7'b0010001 && !nAS && nFpuSense) begin
+    end else if(cpuFC == 2'b11 && addrSel == 7'b0010001 && !nAS && nFpuSense) begin
         fpuBerr <= 1'b1;
     end else begin
         fpuBerr <= 1'b0;
@@ -60,6 +62,14 @@ end
 
 /*****************************************************************************/
 // IDE logic
+
+// temporary assignments
+assign nIdeCS1 = 1;
+assign nIdeCS3 = 1;
+assign nIORd = 1;
+assign nIOWr = 1;
+assign nIdeBufEn = 1;
+assign znDsack = 2'bZZ;
 
 /*****************************************************************************/
 endmodule
