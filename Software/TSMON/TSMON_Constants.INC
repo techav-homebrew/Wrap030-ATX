@@ -59,6 +59,26 @@ aciaSet             equ $15            ; 8N1,÷16 (38400),no interrupts
 
 overlayPort         equ $00300000
 
+ideBase:            equ $80200000
+ideCommand:         equ ideBase+$0000
+ideControl:         equ ideBase+$2000
+ideDataRW:          equ ideCommand+$0
+ideErrorRO:         equ ideCommand+$2
+ideFeatureWO:       equ ideCommand+$2
+ideSectorCountRW:   equ ideCommand+$4
+ideLBALLRW:         equ ideCommand+$6
+ideLBALHRW:         equ ideCommand+$8
+ideLBAHLRW:         equ ideCommand+$a
+ideLBAHHRW:         equ ideCommand+$C
+ideStatusRO:        equ ideCommand+$E
+ideCommandWO:       equ ideCommand+$E
+ideAltStatusRO:     equ ideControl+$C
+ideDevControlWO:    equ ideControl+$C
+ideDevAddressRO:    equ ideControl+$F
+
+ideCmdReadSect:     equ $21             ; read sector command
+ideCmdNOP:          equ $00             ; disk no operation command
+
 ; Symbol equates
 BS:                 EQU $08            ; Backspace
 CR:                 EQU $0D            ; Carriage Return
@@ -90,4 +110,41 @@ TSK_T:              DS.W 37            ; Frame for D0-D7,A0-A6,USP,SSP,SW,PC
 BP_TAB:             DS.W 24            ; Breakpoint table
 FIRST:              DS.B 512           ; DCB area
 BUFFER:             DS.B 256           ; 256 bytes for I/O Buffer
-ptrPSTRING:         DS.L 1             ; pointer to PSTRING function (used by ROM2)
+dskBUF:             DS.W 256           ; 512 byte disk sector buffer
+
+startHeap:
+
+trapGetChar:        EQU 0
+trapPutChar:        EQU 1
+trapNewLine:        EQU 2
+trapGetParam:       EQU 3
+trapPutString:      EQU 4
+trapGetHexChar:     EQU 5
+trapGetHexByte:     EQU 6
+trapGetHexWord:     EQU 7
+trapGetHexLong:     EQU 8
+trapPutHexByte:     EQU 9
+trapPutHexWord:     EQU 10
+trapPutHexLong:     EQU 11
+trapPutSpace:       EQU 12
+trapGetLine:        EQU 13
+trapTidyLine:       EQU 14
+trapExecute:        EQU 15
+trapRestore:        EQU 16
+
+;******************************************************************************
+; Generic macro for system calls
+
+    MACRO callSYS
+    move.l  D0,-(SP)            ; save the working register
+    move.b  \1,D0               ; load syscall number
+    trap    #0                  ; call syscall handler
+    move.l  (SP)+,D0            ; restore the working register
+    ENDM
+
+;callPSTRING:    MACRO
+;    MOVE.l  D0,-(SP)            ; save register
+;    MOVE.b  #trapPutString,D0   ; use TSMON trap system call
+;    TRAP    #0
+;    MOVE.l  (SP)+,D0            ; restore register
+;    ENDM

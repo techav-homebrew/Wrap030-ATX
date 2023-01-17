@@ -57,10 +57,6 @@ COLD:                                  ; Cold entry point for monitor
         BSR SET_DCB                    ; Setup DCB table in RAM
         LEA BANNER(PC),A4              ; Point to banner
         BSR.S HEADING                  ; and print heading
-
-        LEA DATA,A6                    ; make sure we still have the data pointer
-        MOVE.L #PSTRING,ptrPSTRING(A6) ; save pointer to PSTRING function
-        
         MOVE.L #expROM,A0              ; A0 points to extension ROM
         MOVE.L (A0),D0                 ; Read first longword in extension ROM
         CMP.L #'ROM2',D0               ; If extension begins with 'ROM2' then
@@ -544,7 +540,7 @@ DUMP2:
         MOVE.L CN_OVEC(A6),-(A7)       ; Save name of current output device
         MOVE.L #DCB4,CN_OVEC(A6)       ; Set up Port 2 as output device
         BSR NEWLINE                    ; Send newline to host and wait
-        BSR.S DELAY
+        BSR DELAY
         MOVE.L BUFFPT(A6),A4           ; Before dumping,send any string
 DUMP3:
         MOVE.B (A4)+,D0                ; in e input buffer to the host
@@ -896,7 +892,7 @@ X_SET:
         LEA X_BASE,A0                  ; Point to base of exception table
         MOVE.W #253,D0                 ; Number of vectors - 3
 X_SET1:
-        MOVE.L X_UN,(A0)+              ; Store uninitialized exception vector
+        MOVE.L #X_UN,(A0)+             ; Store uninitialized exception vector
         DBRA D0,X_SET1                 ; Repeat until all entries preset
         SUB.L A0,A0                    ; Clear A0 (points to vector table)
         MOVE.L #BUS_ER,8(A0)           ; Setup bus error vector
@@ -1484,7 +1480,7 @@ DCB6:
 ;           |-----------------------| --
 ; 18+S ->   | Pointer to next DCB   |
 
-        SIMHALT
+;        SIMHALT
         END START
 
         *~Font name~Courier New~

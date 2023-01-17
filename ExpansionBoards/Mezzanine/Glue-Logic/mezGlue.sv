@@ -19,12 +19,12 @@ module mezGlue (
     input   wire [6:0]          addrSel,    // address select bits (19:13)  28-24,21-20
     inout   wire                znBerr,     // cpu bus error                18
     inout   wire [1:0]          znDsack,    // cpu data strobe acknowledge  29,31
-    output  wire                nIORd,      // ide io read strobe           5
-    output  wire                nIOWr,      // ide io write strobe          40
-    output  wire                nIdeBufEn,  // ide buffer enable            12
+    output  reg                 nIORd,      // ide io read strobe           5
+    output  reg                 nIOWr,      // ide io write strobe          40
+    output  reg                 nIdeBufEn,  // ide buffer enable            12
     input   wire                nIdeIO16,   // ide 16-bit signal            9
-    output  wire                nIdeCS3,    // ide CE3 signal               8
-    output  wire                nIdeCS1,    // ide CE1 signal               6
+    output  reg                 nIdeCS3,    // ide CE3 signal               8
+    output  reg                 nIdeCS1,    // ide CE1 signal               6
     input   wire                nIdeCE,     // ide enable signal            4
     output  wire                nFpuCE,     // fpu enabale signal           33
     input   wire                nFpuSense   // fpu presence detect signal   37
@@ -63,13 +63,115 @@ end
 /*****************************************************************************/
 // IDE logic
 
-// temporary assignments
-assign nIdeCS1 = 1;
-assign nIdeCS3 = 1;
-assign nIORd = 1;
-assign nIOWr = 1;
-assign nIdeBufEn = 1;
-assign znDsack = 2'bZZ;
+// board will assert nIdeCE when A31=1, A20=0, & A[23:21] match jumper setting.
+// glue logic needs to confirm A[19:14]=0. A13 selects command/control register
+
+// IDE timing state machine
+parameter 
+    sIDL    =   0,  // Idle state
+    sENA    =   1,  // Enable state
+    sWT1    =   2,  // Wait 1 state
+    sWT2    =   3,  // Wait 2 state
+    sBRW    =   4,  // Assert Read/Write state
+    sWT3    =   5,  // Wait 3 state
+    sWT4    =   6,  // Wait 4 state
+    sEND    =   7;  // Terminate Cycle state
+reg [2:0] timingState;
+
+// state machine clocked by rising edge of CPU clock and reset by the rising
+// edge of the CPU Address Strobe signal
+always @(posedge sysClk or posedge nAS) begin
+    if(nAS) begin
+        // reset
+        timingState <= sIDL;
+        nIdeCS1 <= 1;
+        nIdeCS3 <= 1;
+        nIORd <= 1;
+        nIOWr <= 1;
+        nIdeBufEn <= 1;
+        znDsack <= 2'bZZ;
+    end else begin
+        // normal operation
+        case(timingState)
+            sIDL: begin
+                if(!nIdeCE && addrSel[6:1]==0 && addr31) begin
+                    timingState <= sENA;
+                    if(addrSel[0]) begin
+                        nIdeCS3 <= 0;
+                        nIdeCS1 <= 1;
+                    end else begin
+                        nIdeCS3 <= 1;
+                        nIdeCS1 <= 0;
+                    end
+                    nIORd <= 1;
+                    nIOWr <= 1;
+                    nIdeBufEn <= 0;
+                    znDsack <= 2'bZZ;
+                end else begin
+                    timingState <= sIDL;
+                    nIdeCS1 <= 1;
+                    nIdeCS3 <= 1;
+                    nIORd <= 1;
+                    nIOWr <= 1;
+                    nIdeBufEn <= 1;
+                    znDsack <= 2'bZZ;
+                end
+            end
+            sENA: begin
+                timingState <= sWT1;
+                // no signal changes here
+            end
+            sWT1: begin
+                timingState <= sWT2;
+                // no signal changes here
+            end
+            sWT2: begin
+                timingState <= sBRW;
+                // assert IDE read or write strobes as appropriate
+                if(RnW) begin
+                    nIORd <= 0;
+                    nIOWr <= 1;
+                end else begin
+                    nIORd <= 1;
+                    nIOWr <= 0;
+                end
+            end
+            sBRW: begin
+                timingState <= sWT3;
+                // no signal changes here
+            end
+            sWT3: begin
+                timingState <= sWT4;
+                // no signal changes here
+            end
+            sWT4: begin
+                timingState <= sEND;
+                // assert CPU DS Acknowledge
+                znDsack[0] <= 1'bZ;
+                znDsack[1] <= 1'b0;
+            end
+            sEND: begin
+                if(nAS) begin
+                    timingState <= sIDL;
+                    // negate everything
+                    nIdeCS1 <= 1;
+                    nIdeCS3 <= 1;
+                    nIORd <= 1;
+                    nIOWr <= 1;
+                    nIdeBufEn <= 1;
+                    znDsack <= 2'bZZ;
+                end else begin
+                    timingState <= sEND;
+                    // hold everything
+                end
+            end
+            default: begin
+                // how did we end up here?
+                timingState <= sIDL;
+            end
+        endcase
+    end
+end
 
 /*****************************************************************************/
 endmodule
