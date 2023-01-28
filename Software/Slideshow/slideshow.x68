@@ -95,13 +95,14 @@ sImgDisp:   dc.b    ' Displaying image ',0,0
 sPgmEndr:   dc.b    ' Slideshow complete. Restarting.',0,0
 
     even
-imgCount:   dc.w    4
+imgCount:   dc.w    5
 
 ; pointers to the start of each image's data
 imgTable:   dc.l    img3
             dc.l    img2
             dc.l    img1
             dc.l    img0
+            dc.l    logoimg
             dc.l    garbage
 
 img0:
@@ -112,4 +113,6 @@ img2:
     include "Wrap030.inc"
 img3:
     include "Wrap030Testing.inc"
+logoimg:
+    include "RTCLogoLight.inc"
 garbage:
