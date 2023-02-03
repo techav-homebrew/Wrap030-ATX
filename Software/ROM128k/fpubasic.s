@@ -4908,7 +4908,7 @@ labSUBTRACT:
     FPUTEST                             | check for FPU presence
     beq     labSUBnoFPU                 | if no FPU then emulate
     cmp.w   #0xA000,%a3@(FAC2_e)        | check if FAC2 is integer
-    beq.s   labSUBF2Int                 | FAC2 is integer
+    beq     labSUBF2Int                 | FAC2 is integer
     FAC2toD0                            | fetch FAC2 as sfloat
     fmove.s %d0,%fp0                    | send FAC2 to FPU as sfloat
     bra.s   labSUBF1                    | jump ahead to loading FAC1
@@ -4916,7 +4916,7 @@ labSUBF2Int:
     fmove.l  %a3@(FAC2_m),%fp0          | send FAC2 to FPU as integer
 labSUBF1:
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labSUBF1Int                 | FAC1 is integer
+    beq     labSUBF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fsub.s  %d0,%fp0                    | subtract FAC2 from FAC1 as sfloat
 labSUBend:
@@ -4956,7 +4956,7 @@ labADD:
     FPUTEST                             | check for FPU
     beq     labADDnoFPU                 | if no FPU then emulate
     cmp.w   #0xA000,%a3@(FAC2_e)        | check if FAC2 is integer
-    beq.s   labADDF2Int                 | FAC2 is integer
+    beq     labADDF2Int                 | FAC2 is integer
     FAC2toD0                            | fetch FAC2 as sfloat
     fmove.s %d0,%fp0                    | send FAC2 to FPU as sfloat
     bra.s   labADDF1                    | jump ahead to loading FAC1
@@ -4964,7 +4964,7 @@ labADDF2Int:
     fmove.l  %a3@(FAC2_m),%fp0          | send FAC2 to FPU as integer
 labADDF1:
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labADDF1Int                 | FAC1 is integer
+    beq     labADDF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fadd.s  %d0,%fp0                    | add FAC2 to FAC1 as sfloat
 labADDend:
@@ -5263,7 +5263,7 @@ labMULTIPLY:
     FPUTEST                             | check for FPU
     beq     .labMULT_NOFPU              | if no FPU then emulate
     cmp.w   #0xA000,%a3@(FAC2_e)        | check if FAC2 is integer
-    beq.s   labMULTF2Int                | FAC2 is integer
+    beq     labMULTF2Int                | FAC2 is integer
     FAC2toD0                            | fetch FAC2 as sfloat
     fmove.s %d0,%fp0                    | send FAC2 to FPU as sfloat
     bra.s   labMULTF1                   | go load FAC1
@@ -5271,7 +5271,7 @@ labMULTF2Int:
     fmove.l %a3@(FAC2_m),%fp0           | fetch FAC2 as integer
 labMULTF1:
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labMULTF1Int                | FAC1 is integer
+    beq     labMULTF1Int                | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fmul.s  %d0,%fp0                    | multiply FAC2 by FAC1 as sfloat
 labMULTend:
@@ -5384,7 +5384,7 @@ labDIVIDE:
     FPUTEST                             | check for FPU
     beq     .labDIV_NOFPU               | emulate if no FPU
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labDIVF1Int                 | FAC1 is integer
+    beq     labDIVF1Int                 | FAC1 is integer
     FAC1toD0                            | get FAC1 in D0 as sfloat
     fmove.s %d0,%fp0                    | send FAC1 to FPU as sfloat
     bra.s   labDIVF2                    | go fetch FAC2
@@ -5392,7 +5392,7 @@ labDIVF1Int:
     fmove.l %a3@(FAC1_m),%fp0           | send FAC1 to FPU as integer
 labDIVF2:
     cmp.w   #0xA000,%a3@(FAC2_e)        | check if FAC2 is integer
-    beq.s   labDIVF2Int                 | FAC2 is integer
+    beq     labDIVF2Int                 | FAC2 is integer
     FAC2toD0                            | fetch FAC2 as sfloat
     fdiv.s  %d0,%fp0                    | divide FAC2 as sfloat from FAC1
 labDIVend:
@@ -6509,7 +6509,7 @@ labTAN:
     FPUTEST                             | check for FPU
     beq     .labTAN_NOFPU               | emulate if no FPU
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labTANF1Int                 | FAC1 is integer
+    beq     labTANF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     ftan.s  %d0,%fp0                    | calculate TAN(FAC1) as sfloat
 labTANend:
@@ -6552,7 +6552,7 @@ labCOS:
     FPUTEST                             | check for FPU
     beq     .labCOS_NOFPU               | emulate if no FPU
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labCOSF1Int                 | FAC1 is integer
+    beq     labCOSF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fcos.s  %d0,%fp0                    | calculate COS(FAC1) as sfloat
 labCOSend:
@@ -6589,7 +6589,7 @@ labSIN:
     FPUTEST                             | check for FPU
     beq     .labSIN_NOFPU               | emulate if no FPU
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labSINF1Int                 | FAC1 is integer
+    beq     labSINF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fsin.s  %d0,%fp0                    | calculate SIN(FAC1) as sfloat
 labSINend:
@@ -6725,7 +6725,7 @@ labATN:
     FPUTEST                             | check for FPU
     beq     .labATN_NOFPU               | emulate if no FPU
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labATNF1Int                 | FAC1 is integer
+    beq     labATNF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fatan.s %d0,%fp0                    | calculate ATN(FAC1) as sfloat
 labATNend:
@@ -7699,7 +7699,7 @@ labSQR:
     FPUTEST                             | check for FPU
     beq     .labSQR_NOFPU               | emulate if no FPU
     cmp.w   #0xA000,%a3@(FAC1_e)        | check if FAC1 is integer
-    beq.s   labSQRF1Int                 | FAC1 is integer
+    beq     labSQRF1Int                 | FAC1 is integer
     FAC1toD0                            | fetch FAC1 as sfloat
     fsqrt.s  %d0,%fp0                   | calculate SQR(FAC1) as sfloat
 labSQRend:

@@ -220,17 +220,123 @@ prg_strt:
 |ram_addr:	EQU	$00001000	| RAM past Monitor heap (A0)
 |ram_size:	EQU	$001FF000	| RAM Size Free (D0)
 
+    .ifdef  debug
+| debugging macros
+
+| print the current Program counter
+| this is expensive in terms of resources used, but helpful for debugging
+    .macro debugPrintPC
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(-6),%a0                | get current PC before macro
+    move.l  %a0,%sp@-                   | and save it
+    moveq   #2,%d1                      | trap 0 call 2 for print newline
+    trap    #0                          | call the trap
+    move.l  %sp@+,%d0                   | recover the PC we saved
+    moveq   #0xb,%d1                    | trap 0 call B for print hex long
+    trap    #0                          | call the trap
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    .endm
+
+| call TSMON print hex long trap for specified register
+    .macro sysPutHexLong regIn
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    move.l  \regIn,%d0                  | copy selected register to D0
+    moveq   #0xB,%d1                    | trap 0 call B for print Hex Long
+    trap    #0                          | call the trap
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    .endm
+
+    .macro debugPrintD0
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(L\@D0s),%a4            | get header string
+    moveq   #4,%d1                      | trap 0 call 4 for print string
+    trap    #0                          | call the trap
+    move.l  %sp@(0x00),%d0              | restore D0 value
+    moveq   #0xB,%d1                    | trap 0 call B for print Hex Long
+    trap    #0                          | call the trap
+    bra.s   L\@D0End                    | skip over string
+L\@D0s:
+    .ascii  "\r\nD0:   $\0"
+    .even
+L\@D0End:
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    .endm
+
+    .macro debugPrintFAC1
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(L\@FAC1s),%a4          | get header string
+    moveq   #4,%d1                      | trap 0 call 4 for print string
+    trap    #0                          | call the trap
+    move.l  %sp@(0x2c),%a3              | restore A3 just in case
+    move.l  %a3@(FAC1_m),%d0            | get mantissa
+    moveq   #0xB,%d1                    | trap 0 call B for print Hex Long
+    trap    #0                          | call the trap
+    moveq   #'$',%d0                    | print a $ as a divider
+    moveq   #1,%d1                      | trap 0 call 1 for print char
+    trap    #0                          | call the trap
+    move.l  %sp@(0x2c),%a3              | restore A3 just in case
+    move.w  %a3@(FAC1_e),%d0            | get sign & exponent
+    moveq   #0xA,%d1                    | trap 0 call A for print Hex word
+    trap    #0                          | call the trap
+    bra.s   L\@F1End                    | skip over string
+L\@FAC1s:
+    .ascii  "\r\nFAC1: $\0"
+    .even
+L\@F1End:
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    .endm
+
+    .macro debugPrintFAC2
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(L\@FAC2s),%a4          | get header string
+    moveq   #4,%d1                      | trap 0 call 4 for print string
+    trap    #0                          | call the trap
+    move.l  %sp@(0x2c),%a3              | restore A3 just in case
+    move.l  %a3@(FAC2_m),%d0            | get mantissa
+    moveq   #0xB,%d1                    | trap 0 call B for print Hex Long
+    trap    #0                          | call the trap
+    moveq   #'$',%d0                    | print a $ as a divider
+    moveq   #1,%d1                      | trap 0 call 1 for print char
+    trap    #0                          | call the trap
+    move.l  %sp@(0x2c),%a3              | restore A3 just in case
+    move.w  %a3@(FAC2_e),%d0            | get sign & exponent
+    moveq   #0xA,%d1                    | trap 0 call A for print Hex word
+    trap    #0                          | call the trap
+    bra     L\@F2End                    | skip over string
+L\@FAC2s:
+    .ascii  "\r\nFAC2: $\0"
+    .even
+L\@F2End:
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    .endm
+
+| end debugging macros
+    .endif
+
 | macros for converting between EhBASIC floats & IEEE-754 single-precision
 | to convert to IEEE-754:
-|   subtract 1 from exponent
+|   subtract 2 from exponent
 |   mask high bit of mantissa
 | to convert to EhBASIC:
-|   add 1 to exponent
+|   add 2 to exponent
 |   normalize such that first bit of mantissa is 1
 
 | get FAC1 & format as Single-Precision Float in D0
     .macro FAC1toD0
     move.l  %d1,%sp@-                   | save D1
+    .ifdef  debug
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(L\@F1D0s),%a4          | load pointer to header string
+    moveq   #4,%d1                      | trap 0 call 4 for print string
+    trap    #0                          | call the trap
+    bra.s   L\@F1D0End                  | skip over header string
+L\@F1D0s:
+    .ascii  "\r\nFAC1toD0: \0"
+    .even
+L\@F1D0End:
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    debugPrintFAC1
+    .endif
     move.l  %a3@(FAC1_m),%d0            | get mantissa
     lsr.l   #8,%d0                      | shift mantissa into position
     swap    %d0                         | word swap
@@ -238,16 +344,32 @@ prg_strt:
     move.w  %a3@(FAC1_e),%d1            | get sign & exponent
     lsr.b   #7,%d1                      | move sign to LSB
     ror.w   #8,%d1                      | swap position of sign & exponent
-    subq.b  #1,%d1                      | subtract 1 from exponent
+    subq.b  #2,%d1                      | subtract 2 from exponent
     lsl.w   #7,%d1                      | shift sign & exponent into position
     or.w    %d1,%d0                     | combine s&e with mantissa
     swap    %d0                         | revert word order
+    .ifdef  debug
+    debugPrintD0
+    .endif
     move.l  %sp@+,%d1                   | restore D1
     .endm
 
 | get FAC2 & format as Single-Precision Float in D0
     .macro FAC2toD0
     move.l  %d1,%sp@-                   | save D1
+    .ifdef  debug
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(L\@F1D0s),%a4          | load pointer to header string
+    moveq   #4,%d1                      | trap 0 call 4 for print string
+    trap    #0                          | call the trap
+    bra.s   L\@F1D0End                  | skip over header string
+L\@F1D0s:
+    .ascii  "\r\nFAC2toD0: \0"
+    .even
+L\@F1D0End:
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    debugPrintFAC2
+    .endif
     move.l  %a3@(FAC2_m),%d0            | get mantissa
     lsr.l   #8,%d0                      | shift mantissa into position
     swap    %d0                         | word swap
@@ -255,10 +377,13 @@ prg_strt:
     move.w  %a3@(FAC2_e),%d1            | get sign & exponent
     lsr.b   #7,%d1                      | move sign to LSB
     ror.w   #8,%d1                      | swap position of sign & exponent
-    subq.b  #1,%d1                      | subtract 1 from exponent
+    subq.b  #2,%d1                      | subtract 2 from exponent
     lsl.w   #7,%d1                      | shift sign & exponent into position
     or.w    %d1,%d0                     | combine s&e with mantissa
     swap    %d0                         | revert word order
+    .ifdef  debug
+    debugPrintD0
+    .endif
     move.l  %sp@+,%d1                   | restore D1
     .endm
 
@@ -266,11 +391,23 @@ prg_strt:
 | by first converting to EhBASIC packed float
     .macro D0toFAC1
     move.l %d1,%sp@-                    | first save D1
+    .ifdef debug
+    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
+    lea     %pc@(L\@F1D0s),%a4          | load pointer to header string
+    moveq   #4,%d1                      | trap 0 call 4 for print string
+    trap    #0                          | call the trap
+    bra.s   L\@F1D0End                  | skip over header string
+L\@F1D0s:
+    .ascii  "\r\nD0toFAC1: \0"
+    .even
+L\@F1D0End:
+    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
+    debugPrintD0
+    .endif
     swap   %d0                          | reverse byte order
     move.w %d0,%d1                      | get sign & exponent in D1
-|    rol.w  #1,%d1                       | move exponent into high byte
     ror.w  #7,%d1                       | move exponent into low byte
-    addq.b #1,%d1                       | add 1 to exponent
+    addq.b #2,%d1                       | add 2 to exponent
     rol.w  #8,%d1                       | move exponent into high byte
     lsl.b  #7,%d1                       | move sign into MSB of low byte
     andi.w #0x7f,%d0                    | mask out space for sign & exponent
@@ -284,6 +421,9 @@ prg_strt:
 L\@NB1T:
     move.l %d0,%a3@(FAC1_m)             | move mantissa into FAC1
     move.b %a3@(FAC1_e),%d0             | get FAC1 exponent
+    .ifdef  debug
+    debugPrintFAC1
+    .endif
     move.l %sp@+,%d1                    | restore D1
     .endm
 
