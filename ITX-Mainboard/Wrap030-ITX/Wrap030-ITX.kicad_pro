@@ -232,7 +232,7 @@
       "no_connect_dangling": "warning",
       "pin_not_connected": "error",
       "pin_not_driven": "error",
-      "pin_to_pin": "warning",
+      "pin_to_pin": "error",
       "power_pin_not_driven": "error",
       "similar_labels": "warning",
       "simulation_model_issue": "error",
@@ -350,6 +350,22 @@
     [
       "0e9f45e6-9d2f-4465-b1e0-6765bdff6fff",
       "Serial-Parallel-IO"
+    ],
+    [
+      "253789b7-cae8-486b-a073-f8f34e01a47f",
+      "ISA-IDE"
+    ],
+    [
+      "716ad3df-63c5-43f8-ad43-3095516fd8be",
+      "ISA-IDE-Connectors"
+    ],
+    [
+      "e0e7274a-05f5-4d4a-be10-b5428e1556d7",
+      "Power-Supply"
+    ],
+    [
+      "08245a1d-e019-4487-bc27-8c0c37f6c7e2",
+      "Keyboard"
     ]
   ],
   "text_variables": {}
