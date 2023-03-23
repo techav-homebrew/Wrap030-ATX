@@ -1086,6 +1086,37 @@
     )
   )
 
+  (symbol (lib_id "power:GND") (at 165.1 67.31 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 000edf24-d84d-415e-a94c-860a130fd4b8)
+    (property "Reference" "#PWR04" (at 165.1 73.66 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 165.1 71.4455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 165.1 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 165.1 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid cdbb037a-edcd-4287-ba9b-e109b8adedda))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0345") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "power:GND") (at 48.26 116.84 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 019f1e5a-a956-4535-8351-b6388de3688c)
@@ -1190,6 +1221,37 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "#PWR0281") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:GND") (at 152.4 80.01 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 11f2f151-9e76-4aff-b3f3-21ff63eb3181)
+    (property "Reference" "#PWR04" (at 152.4 86.36 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 152.4 84.1455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 152.4 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 152.4 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 6eac5fad-cdd8-4b03-834c-5a06180bc981))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0339") (unit 1)
         )
       )
     )
@@ -1548,6 +1610,37 @@
     )
   )
 
+  (symbol (lib_id "power:GND") (at 177.8 67.31 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 3504632e-1414-4e00-bfc3-afec9584c7df)
+    (property "Reference" "#PWR04" (at 177.8 73.66 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 177.8 71.4455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 177.8 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 177.8 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 9c581786-1016-4dde-a7da-4bdbf1a01384))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0344") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "power:-5V") (at 58.42 116.84 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 35f3712c-b419-4318-9fc3-8fa4b6549861)
@@ -1614,34 +1707,6 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 165.1 67.31 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid 40d2ae97-caa5-4dbd-8d0e-89c1729ddbf5)
-    (property "Reference" "#PWR0252" (at 165.1 73.66 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 165.1 71.4455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 165.1 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 165.1 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 5db97609-5579-4427-b52d-1ec40ec68d40))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0339") (unit 1)
-        )
-      )
-    )
-  )
-
   (symbol (lib_id "Device:C_Polarized_US") (at 38.1 85.09 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 412a3a4a-8930-455b-a660-de0855bf5065)
@@ -1675,6 +1740,37 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "C71") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:GND") (at 165.1 80.01 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 41a6e3ca-c754-4707-9600-a0bff9ffecff)
+    (property "Reference" "#PWR04" (at 165.1 86.36 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 165.1 84.1455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 165.1 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 165.1 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 9f3fc491-2192-4c34-8306-21461a3c4494))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0340") (unit 1)
         )
       )
     )
@@ -1814,34 +1910,6 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 152.4 92.71 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid 5ab9529e-1015-4c81-bd84-63da21e5cda5)
-    (property "Reference" "#PWR0252" (at 152.4 99.06 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 152.4 96.8455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 152.4 92.71 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 152.4 92.71 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 43d50b64-526d-4896-a4fd-265469379243))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0346") (unit 1)
-        )
-      )
-    )
-  )
-
   (symbol (lib_id "power:GND") (at 66.04 33.02 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 5ad22b3c-d36a-4059-a9f9-426716d70948)
@@ -1865,34 +1933,6 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "#PWR0270") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:GND") (at 152.4 67.31 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid 5d091295-c663-4e55-aedd-b84fdbe41eab)
-    (property "Reference" "#PWR0252" (at 152.4 73.66 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 152.4 71.4455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 152.4 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 152.4 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 62b277c4-4d8d-4f14-947e-12e620945805))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0338") (unit 1)
         )
       )
     )
@@ -1992,62 +2032,6 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 190.5 67.31 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid 797a5c8a-a2e1-468c-9f40-b52fd588dc31)
-    (property "Reference" "#PWR0252" (at 190.5 73.66 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 190.5 71.4455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 190.5 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 190.5 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 024daa80-76c5-4e8e-a9c0-8e37dada2bff))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0341") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:GND") (at 190.5 80.01 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid 7d710d70-c92c-43ea-8e38-54d9816ec5d7)
-    (property "Reference" "#PWR0252" (at 190.5 86.36 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 190.5 84.1455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 190.5 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 190.5 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 310f9832-cd84-4cb6-a964-5c400a4d8d5e))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0345") (unit 1)
-        )
-      )
-    )
-  )
-
   (symbol (lib_id "power:-12V") (at 104.14 60.96 270) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 8126815c-1f20-4e79-bbb3-6309ee7b74cd)
@@ -2071,6 +2055,37 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "#PWR0276") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:GND") (at 152.4 92.71 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 869b9929-23dd-4cbe-b9cb-e53702a5715d)
+    (property "Reference" "#PWR04" (at 152.4 99.06 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 152.4 96.8455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 152.4 92.71 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 152.4 92.71 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 335e2ed7-0ce9-4119-a7c0-49c59558e1ee))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0338") (unit 1)
         )
       )
     )
@@ -2467,6 +2482,37 @@
     )
   )
 
+  (symbol (lib_id "power:GND") (at 152.4 67.31 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid b3f7155a-61b5-4f15-ac49-272584685886)
+    (property "Reference" "#PWR04" (at 152.4 73.66 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 152.4 71.4455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 152.4 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 152.4 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 2bbffe80-ab97-44c9-8c6c-47ecc1eca005))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0349") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "Device:C_Polarized_US") (at 53.34 110.49 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid b6930c00-caea-4148-84ad-9e01af4cb427)
@@ -2500,6 +2546,37 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "C85") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:GND") (at 190.5 80.01 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid b7bea0b2-820f-4de2-94e0-b51fab869c9b)
+    (property "Reference" "#PWR04" (at 190.5 86.36 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 190.5 84.1455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 190.5 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 190.5 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 9a88cb72-739b-493e-84df-12cf8a18b64d))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0342") (unit 1)
         )
       )
     )
@@ -2553,34 +2630,6 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "#PWR0287") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:GND") (at 152.4 80.01 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid bb33f63e-90e8-4753-a665-6ba80d0c8222)
-    (property "Reference" "#PWR0252" (at 152.4 86.36 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 152.4 84.1455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 152.4 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 152.4 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 87dfe51a-fd8f-4c63-9ec5-3ea2173ed67e))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0342") (unit 1)
         )
       )
     )
@@ -2897,6 +2946,37 @@
     )
   )
 
+  (symbol (lib_id "power:GND") (at 190.5 67.31 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid da6c700c-196a-44b5-b103-1ba18b70d3a1)
+    (property "Reference" "#PWR04" (at 190.5 73.66 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 190.5 71.4455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 190.5 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 190.5 67.31 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid b4c406ce-2235-4e03-904f-2ff63062c966))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0343") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "power:+5VP") (at 48.26 104.14 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e0c2a4a3-c8dd-41f2-a202-38dc0dff6f42)
@@ -2945,34 +3025,6 @@
       (project "Wrap030-ITX"
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "H2") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:GND") (at 177.8 67.31 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid e8357551-a23c-404e-a85d-d0022a00be0d)
-    (property "Reference" "#PWR0252" (at 177.8 73.66 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 177.8 71.4455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 177.8 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 177.8 67.31 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 1e3c5a46-c953-4b68-b216-87d54692e069))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0340") (unit 1)
         )
       )
     )
@@ -3106,6 +3158,37 @@
     )
   )
 
+  (symbol (lib_id "power:GND") (at 177.8 80.01 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid f2baf672-bbb1-439a-bbf3-d7edaf409913)
+    (property "Reference" "#PWR04" (at 177.8 86.36 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 177.8 84.1455 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 177.8 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 177.8 80.01 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid f3badc6c-1dc2-4532-b0a5-e0ce1caea5c2))
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c"
+          (reference "#PWR04") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/26daa56c-062f-43fe-98ce-9d136969f1f9"
+          (reference "#PWR0181") (unit 1)
+        )
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
+          (reference "#PWR0341") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "Connector:ATX-24") (at 88.9 50.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid f4138d0f-729b-4968-ab48-d12939d15c1b)
@@ -3189,62 +3272,6 @@
         )
         (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
           (reference "#PWR0279") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:GND") (at 165.1 80.01 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid fb2c77dc-1ec1-4a1d-839a-392f9355e9c1)
-    (property "Reference" "#PWR0252" (at 165.1 86.36 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 165.1 84.1455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 165.1 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 165.1 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 0f3e83ed-e800-4007-87b2-a2ca1ecf66a3))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0343") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:GND") (at 177.8 80.01 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
-    (uuid fe86caed-2d61-49c5-bfaf-9af7838676e1)
-    (property "Reference" "#PWR0252" (at 177.8 86.36 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "GND" (at 177.8 84.1455 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 177.8 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 177.8 80.01 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 0477b213-114b-4121-a81e-49a83bfd8548))
-    (instances
-      (project "Wrap030-ITX"
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/b3cc5e75-f49f-4aac-aafa-9673c6f4863c"
-          (reference "#PWR0252") (unit 1)
-        )
-        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c/e0e7274a-05f5-4d4a-be10-b5428e1556d7"
-          (reference "#PWR0344") (unit 1)
         )
       )
     )
