@@ -134,6 +134,23 @@
     )
   )
 
+  (sheet (at 25.4 139.7) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid c31cbf70-4f99-41fb-a458-7a9733abba21)
+    (property "Sheetname" "Interrupts" (at 25.4 138.9884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "IRQ.kicad_sch" (at 25.4 144.0946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ITX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "12"))
+      )
+    )
+  )
+
   (sheet (at 25.4 38.1) (size 25.4 3.81) (fields_autoplaced)
     (stroke (width 0.1524) (type solid))
     (fill (color 0 0 0 0.0000))
