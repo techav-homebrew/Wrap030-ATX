@@ -5,9 +5,9 @@
   (paper "USLetter")
 
   (title_block
-    (title "Wrap030 ITX")
-    (date "2023-03-15")
-    (rev "0")
+    (title "Wrap030-ATX Mainboard")
+    (date "2023-03-26")
+    (rev "1")
     (company "techav")
   )
 
