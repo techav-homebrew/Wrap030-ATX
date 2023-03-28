@@ -984,7 +984,7 @@
     (property "Reference" "U24" (at 127.6859 74.4601 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "ATtiny2313A-PU" (at 112.4459 109.4011 90)
+    (property "Value" "ATtiny2313A" (at 112.4459 109.4011 90)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Package_DIP:DIP-20_W7.62mm" (at 127 101.6 0)

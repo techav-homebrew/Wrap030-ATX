@@ -878,7 +878,7 @@
     (property "Reference" "ROM1" (at 83.2359 38.9001 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "SST39SF040" (at 83.2359 40.8211 0)
+    (property "Value" "39SF040" (at 83.2359 40.8211 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Package_LCC:PLCC-32_THT-Socket" (at 81.28 66.04 0)
