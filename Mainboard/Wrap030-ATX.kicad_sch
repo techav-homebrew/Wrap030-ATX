@@ -1,0 +1,191 @@
+(kicad_sch (version 20230121) (generator eeschema)
+
+  (uuid 911cb688-7d4c-4194-bbd3-2b645bd8d53c)
+
+  (paper "USLetter")
+
+  (title_block
+    (title "Wrap030-ATX Mainboard")
+    (date "2023-03-26")
+    (rev "1")
+    (company "techav")
+  )
+
+  (lib_symbols
+  )
+
+
+  (sheet (at 25.4 127) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 08245a1d-e019-4487-bc27-8c0c37f6c7e2)
+    (property "Sheetname" "Keyboard" (at 25.4 126.2884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "keyboard.kicad_sch" (at 25.4 131.3946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "11"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 88.9) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 0e9f45e6-9d2f-4465-b1e0-6765bdff6fff)
+    (property "Sheetname" "Serial-Parallel-IO" (at 25.4 88.1884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "SPIO.kicad_sch" (at 25.4 93.2946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "7"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 101.6) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 253789b7-cae8-486b-a073-f8f34e01a47f)
+    (property "Sheetname" "ISA-IDE" (at 25.4 100.8884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "ISA-IDE.kicad_sch" (at 25.4 105.9946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "8"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 25.4) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 26daa56c-062f-43fe-98ce-9d136969f1f9)
+    (property "Sheetname" "VidGen" (at 25.4 24.6884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "VidGen.kicad_sch" (at 25.4 29.7946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "5"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 76.2) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 90ce8076-0f8c-487c-a4ee-dcb01b59165b)
+    (property "Sheetname" "ROM" (at 25.4 75.4884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "ROM.kicad_sch" (at 25.4 80.5946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "6"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 50.8) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid aa0ccbb1-2ab7-4898-88a6-d9cd881bb239)
+    (property "Sheetname" "Main-Memory" (at 25.4 50.0884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "MainMem.kicad_sch" (at 25.4 55.1946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "4"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 63.5) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid b3cc5e75-f49f-4aac-aafa-9673c6f4863c)
+    (property "Sheetname" "Bus-Controller" (at 25.4 62.7884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "Bus-Ctrl.kicad_sch" (at 25.4 67.8946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "3"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 139.7) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid c31cbf70-4f99-41fb-a458-7a9733abba21)
+    (property "Sheetname" "Interrupts" (at 25.4 138.9884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "IRQ.kicad_sch" (at 25.4 144.0946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "12"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 38.1) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid daefa06e-0bcc-4cd3-a849-7c099c212056)
+    (property "Sheetname" "CPU-FPU" (at 25.4 37.3884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "cpu-fpu.kicad_sch" (at 25.4 42.4946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "2"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 114.3) (size 25.4 3.81) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid e0e7274a-05f5-4d4a-be10-b5428e1556d7)
+    (property "Sheetname" "Power-Supply" (at 25.4 113.5884 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "power.kicad_sch" (at 25.4 118.6946 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Wrap030-ATX"
+        (path "/911cb688-7d4c-4194-bbd3-2b645bd8d53c" (page "10"))
+      )
+    )
+  )
+
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)

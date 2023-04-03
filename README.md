@@ -1,2 +1,2 @@
 # Wrap030
-Homebrew 68030 computer
+Homebrew mATX form-factor 68030 computer

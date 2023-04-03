@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Wrap030-ATX")(type "KiCad")(uri "${KIPRJMOD}/Wrap030-ATX.kicad_sym")(options "")(descr ""))
+)
