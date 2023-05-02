@@ -27,7 +27,7 @@ module busCtrl (
     input   wire            cpuRWn,         // CPU read/write signal
     input   wire [1:0]      cpuSIZ,         // CPU size signals
     output  wire [1:0]      cpuDSACKn,      // CPU async cycle acknowledge signals
-    output  wire            cpuSTERMn,      // CPU sync cycle acknowledge signals
+    input   wire            cpuSTERMn,      // CPU sync cycle acknowledge signals
     output  wire            cpuAVECn,       // CPU autovector signal
     output  wire            cpuBERRn,       // CPU bus error signal
     output  wire            cpuCIINn,       // CPU cache inhibit signal
@@ -77,7 +77,6 @@ reg [3:0] timingState;
 always @(posedge sysClk or posedge cpuASn) begin
     if(cpuASn) begin
         cpuDSACKn <= 2'b11;
-        cpuSTERMn <= 1;
         cpuBERRn <= 1;
         timingState <= 0;
         romCEn <= 1;
@@ -97,7 +96,6 @@ always @(posedge sysClk or posedge cpuASn) begin
             sIDL: begin
                 // Idle state. Deassert all signals. Wait for CPU to start a bus cycle
                 cpuDSACKn <= 2'b11;
-                cpuSTERMn <= 1;
                 cpuBERRn <= 1;
                 romCEn <= 1;
                 sysMRDn <= 1;
@@ -125,7 +123,7 @@ always @(posedge sysClk or posedge cpuASn) begin
                                 // FPU is not present, BERR
                                 timingState <= sBRR;
                             end
-                        end else if(cpuAddrHi == 11'hfff && cpuAddrMid == 4'hf) begin
+                        end else if(cpuAddrHi == 11'h7ff && cpuAddrMid == 4'hf) begin
                             // this is an IRQ cycle, for now just assert AVEC
                             cpuAVECn <= 0;
                             timingState <= sEND;
@@ -145,7 +143,7 @@ always @(posedge sysClk or posedge cpuASn) begin
                                 timingState <=sRWR;
                             end
                         end else if(cpuAddrHi[10:3] == 8'h00) begin
-                            // this is a rom cycle
+                            /*// this is a rom cycle
                             timingState <= sRM1;
                             romCEn <= 0;
                             if(cpuRWn) begin
@@ -154,6 +152,17 @@ always @(posedge sysClk or posedge cpuASn) begin
                             end else begin
                                 // rom write cycle
                                 sysMWRn <= 0;
+                            end*/
+                            cpuCIINn <= 1;
+                            if(~regSets[0] & cpuRWn) begin
+                                // overlay ROM Read cycle
+                                timingState <= sRM1;
+                                romCEn <= 0;
+                                sysMRDn <= 0;
+                            end else begin
+                                // DRAM cycle
+                                timingState <= sEXT;
+                                ramCEn <= 0;
                             end
                         end else if(cpuAddrHi[10:3] == 8'hdc) begin
                             // this is an S/P I/O cycle
@@ -180,6 +189,12 @@ always @(posedge sysClk or posedge cpuASn) begin
                             berrTimer <= 8'hff;
                             timingState <= sEXT;
                             cpuCIINn <= 0;
+                        end else if(cpuAddrHi[10:3] == 8'hf0) begin
+                            // this is a normal ROM access cycle
+                            romCEn <= 0;
+                            timingState <= sRM1;
+                            if(cpuRWn) sysMRDn <= 0;
+                            else sysMWRn <= 0;
                         end else begin
                             // requested address not addressed by bus controller
                             // start a bus error countdown
@@ -199,7 +214,6 @@ always @(posedge sysClk or posedge cpuASn) begin
                     timingState <= sIDL;
                     cpuDSACKn <= 2'b11;
                     cpuBERRn <= 1;
-                    cpuSTERMn <= 1;
                 end else begin
                     timingState <= sEND;
                 end
@@ -276,12 +290,12 @@ always @(posedge sysClk or posedge cpuASn) begin
                     end
                 end else begin
                     // external device is ending a bus cycle
-                    if(!ramACKn) begin
+                    /*if(!ramACKn) begin
                         cpuSTERMn <= 0;
-                    end else begin
+                    end else begin*/
                         cpuDSACKn[0] <= sysACKn[0] & vidACKn & keyACKn & isaACK8n;
                         cpuDSACKn[1] <= sysACKn[1] & isaACK16n;
-                    end
+                    //end
                     timingState <= sEND;
                 end
             end
@@ -307,7 +321,8 @@ always @(negedge sysClk) begin
 end
 
 always_comb begin
-    sysPWRON <= 0;
+    //sysPWRON <= 0;
+    sysPWRON <= regSets[1];
     sysLEDdebug <= regSets[2];
 
     // on power on, hold RESET low until the power supply pulls PWR_OK high.

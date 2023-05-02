@@ -3,7 +3,7 @@ import time
 import sys
 import serial
  
-ser = serial.Serial(port='COM4', baudrate=115200, timeout=1)
+ser = serial.Serial(port='COM5', baudrate=115200, timeout=1)
 
 if ser.isOpen():
 	ser.close()
