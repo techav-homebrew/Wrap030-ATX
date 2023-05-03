@@ -99,25 +99,25 @@ initCOM0:
     nop
     move.b  #$03,comRegLCR(A1)  ; disable divisor registers
     nop
-    lea     strHello,A4         ; get pointer to string
+    lea     strHello(PC),A4        ; get pointer to string
     prntStr                     ; call print string macro
 
 initRAM:
-    lea     strRamInit,A4       ; get ram init header string
+    lea     strRamInit(PC),A4   ; get ram init header string
     prntStr                     ; and print it
     move.w  #$400,D0            ; delay to let DRAM controller initialize
 .ramDelayLp:
     dbra    D0,.ramDelayLp      ; keep delaying
-    lea     strOK,A4            ; print memory initialization ok string
+    lea     strOK(PC),A4        ; print memory initialization ok string
     prntStr
 
 ; we need to disable the startup overlay before main memory can be accessed
 disableOverlay:
-    lea     strOverlayDis,A4    ; disabling Overlay string
+    lea     strOverlayDis(PC),A4   ; disabling Overlay string
     prntStr
     lea     busCtrlPort,A0      ; get address to bus controller register
     ori.b   #1,(A0)             ; set overlay disable byte
-    lea     strOK,A4            ; overlay disabled ok string
+    lea     strOK(PC),A4        ; overlay disabled ok string
     prntStr
 
 ; test if overlay is properly disabled
@@ -126,7 +126,7 @@ disableOverlay:
     move.l  ramBot,D1           ; read result
     cmp.l   D1,D0               ; and compare
     bne     overlayTestFail     ; fail
-    lea     strOvrlOk,A4        ; get test passed string
+    lea     strOvrlOk(PC),A4    ; get test passed string
     prntStr                     ; and print
 
     lea     4+ramBot,A0         ; get test address
@@ -139,7 +139,7 @@ disableOverlay:
     move.l  #$a1523a45,D0       ; get test comparison
     cmp.l   D1,D0               ; check if they match
     bne     ramWriteTestFail    ; nope
-    lea     strRamWrOK,A4       ; get test passed string
+    lea     strRamWrOK(PC),A4   ; get test passed string
     prntStr
 
 
@@ -151,12 +151,12 @@ delayLoop:
     bra     MAINLOOP
 
 overlayTestFail:
-    lea     strOvrlFail,A4      ; get string
+    lea     strOvrlFail(PC),A4  ; get string
     prntStr                     ; and print
     bra     MAINLOOP
 
 ramWriteTestFail:
-    lea     strRamWrFail,A4     ; get error string
+    lea     strRamWrFail(PC),A4 ; get error string
     prntStr                     ; and print
     bra     MAINLOOP
 

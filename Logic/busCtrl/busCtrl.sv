@@ -1,17 +1,9 @@
-/******************************************************************************
- * Wrap030 Bus Controller logic
- * techav
- * 2023-04-15
- ******************************************************************************
- * 2023-04-15 Initial build
- *****************************************************************************/
-
 module busCtrl (
     // general system signals
     input   wire            sysClk,         // Primary system clock
-    inout   wire            sysRESETn,      // Primary system reset signal
-    input   wire            sysPWROK,       // System power on OK signal
-    output  wire            sysPWRON,       // System ATX soft power on latch
+    input   wire            sysRESETn,      // Primary system reset signal
+    input   wire            sysPWROKn,      // System power on OK signal
+    output  wire            sysPRWONn,      // System ATX soft power on latch
     output  wire            sysMWRn,        // System memory write strobe
     output  wire            sysMRDn,        // System memory read strobe
     output  wire            sysLEDdebug,    // GPIO for software-controlled LED
@@ -48,289 +40,318 @@ module busCtrl (
     input   wire            ramACKn         // RAM cycle acknowledge
 );
 
-// bus controller settings register
-reg [7:0] regSets;
+// control registers
+reg regOverlay, regPower, regGPIO;
 
-// bus cycle timeout counter
-reg [7:0] berrTimer;
-
-// primary bus state machine
+// primary bus controller state machine
 parameter
-    sIDL    =    0, // Idle state
-    sRM1    =    1, // ROM1 state
-    sRM2    =    2, // ROM2 state
-    sRM3    =    3, // ROM3 state
-    sRM4    =    4, // ROM4 state
-    sSP1    =    5, // SPIO1 state
-    sSP2    =    6, // SPIO2 state
-    sSP3    =    7, // SPIO3 state
-    sSP4    =    8, // SPIO4 state
-    sSP5    =    9, // SPIO5 state
-    sSP6    =   10, // SPIO6 state
-    sRRD    =   11, // Bus controller register read state
-    sRWR    =   12, // Bus controller register write state
-    sEXT    =   13, // External cycle
-    sBRR    =   14, // Immediate bus error state
-    sEND    =   15; // Cycle end state
-reg [3:0] timingState;
+    sIDLE   =    0, // Idle state
+    sROM0   =    1, // ROM state 0
+    sROM1   =    2, // ROM state 1
+    sROM2   =    3, // ROM state 2
+    sROM3   =    4, // ROM state 3
+    sSPI0   =    5, // SPIO state 0
+    sSPI1   =    6, // SPIO state 1
+    sSPI2   =    7, // SPIO state 2
+    sSPI3   =    8, // SPIO state 3
+    sSPI4   =    9, // SPIO state 4
+    sSPI5   =   10, // SPIO state 5
+    sSPI6   =   11, // SPIO state 6
+    sDRAM   =   12, // DRAM access cycle
+    sAVEC   =   13, // IRQ Autovector cycle
+    sFPU0   =   14, // FPU access start
+    sFPU1   =   15, // FPU access termination
+    sBERR   =   16, // Bus Error state
+    sVID0   =   17, // vidGen access start
+    sVID1   =   18, // vidGen access termination
+    sKBD0   =   19, // keyboard access start
+    sKBD1   =   20, // keyboard access termination
+    sISA0   =   21, // ISA access start
+    sISA1   =   22, // ISA access termination
+    sREGR   =   23, // busCtrl register read
+    sREGW   =   24, // busCtrl register write
+    sEXT    =   25; // external access cycle
+reg [4:0] timingState, nextState;
 
-always @(posedge sysClk or posedge cpuASn) begin
-    if(cpuASn) begin
-        cpuDSACKn <= 2'b11;
-        cpuBERRn <= 1;
-        timingState <= 0;
-        romCEn <= 1;
-        sysMRDn <= 1;
-        sysMWRn <= 1;
-        cpuDataHiHi <= 8'bZZZZZZZZ;
-        spioCEn <= 1;
-        keyATNn <= 1;
-        vidCEn <= 1;
-        isaCEn <= 1;
-        fpuCEn <= 1;
-        ramCEn <= 1;
-        cpuCIINn <= 1;
-        cpuAVECn <= 1;
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        timingState <= sIDLE;
     end else begin
-        case (timingState)
-            sIDL: begin
-                // Idle state. Deassert all signals. Wait for CPU to start a bus cycle
+        timingState <= nextState;
+    end 
+end
+
+always_comb begin
+    nextState = timingState;
+    case(timingState)
+        sIDLE: begin
+            if(!cpuASn) begin
+                if(cpuFC == 3'b111) begin
+                    // CPU space 
+                    if(cpuAddrHi == 0 & cpuAddrMid == 4'h2) begin
+                        // coprocessor access cycle
+                        if(!fpuSENSEn) nextState = sFPU0;
+                        else nextState = sBERR;
+                    end else if(cpuAddrHi == 11'h7ff & cpuAddrMid == 4'hf) begin
+                        // IRQ cycle
+                        nextState = sAVEC;
+                    end else begin
+                        // unsupported CPU space cycle
+                        nextState = sBERR;
+                    end
+                end else begin
+                    // memory space
+                    case(cpuAddrHi[10:3])
+                        8'h00: begin
+                            // DRAM space or overlay ROM read
+                            if(!regOverlay & cpuRWn) nextState = sROM0;
+                            else nextState = sDRAM;
+                        end
+                        8'hf0: nextState = sROM0;
+                        8'hd0: nextState = sVID0;
+                        8'hd2, 8'hd3: nextState = sISA0;
+                        8'hdc: nextState = sSPI0;
+                        8'hde: nextState = sKBD0;
+                        8'he0: begin
+                            if(cpuRWn) nextState = sREGR;
+                            else nextState = sREGW;
+                        end
+                        default: nextState = sEXT;
+                    endcase
+                end
+            end else begin
+                nextState = sIDLE;
+            end
+        end
+        
+        // ROM sequence
+        sROM0: nextState = sROM1;
+        sROM1: nextState = sROM2;
+        sROM2: nextState = sROM3;
+
+        // SPIO sequence
+        sSPI0: nextState = sSPI1;
+        sSPI1: nextState = sSPI2;
+        sSPI2: nextState = sSPI3;
+        sSPI3: nextState = sSPI4;
+        sSPI4: nextState = sSPI5;
+        sSPI5: nextState = sSPI6;
+
+        // FPU sequence
+        sFPU0: nextState = sFPU0;
+
+        // vidGen sequence
+        sVID0: nextState = sVID1;
+
+        // keyboard controller sequence
+        sKBD0: nextState = sKBD1;
+
+        // ISA sequence
+        sISA0: nextState = sISA1;
+
+        // cycle end states for each sequence that can time out
+        sDRAM, sFPU1, sVID1, sKBD1, sISA1, sEXT: begin
+            if(cpuASn) begin
+                nextState = sIDLE;
+            end else if(berrTimer == 0) begin
+                nextState = sBERR;
+            end else begin
+                nextState = timingState;
+            end
+        end
+
+        // direct end cycles
+        sROM3, sSPI6, sAVEC, sBERR, sREGR, sREGW: begin
+            if(cpuASn) nextState = sIDLE;
+            else nextState = timingState;
+        end
+    endcase
+end
+
+// bus error timout
+reg [7:0] berrTimer;
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        berrTimer <= 8'hff;
+    end else begin
+        case(timingState)
+            sIDLE: berrTimer <= 8'hff;
+            default: berrTimer <= berrTimer - 8'h01;
+        endcase
+    end
+end
+
+// load data into settings registers during sREGW state
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        // regOverlay <= 0;
+        regPower <= 0;
+        regGPIO <= 0;
+    end else begin
+        if(timingState == sREGW) begin
+            // regOverlay <= cpuDataHiHi[0];
+            regPower <= cpuDataHiHi[1];
+            regGPIO <= cpuDataHiHi[2];
+        end
+    end
+end
+
+// automatically disable overlay on 8th ROM access cycle
+// ... I think this will work?
+reg [2:0] overlayCycleCount;
+always @(negedge romCEn, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        regOverlay <= 0;
+        overlayCycleCount <= 0;
+    end else begin
+        if(overlayCycleCount != 3'h7) begin
+            overlayCycleCount <= overlayCycleCount + 3'h1;
+        end else begin
+            regOverlay <= 1;
+        end
+    end
+end
+
+// synchronous control output signals
+// DSACKx & AVEC
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        cpuDSACKn <= 2'b11;
+        cpuAVECn <= 1'b1;
+    end else begin
+        case(nextState)
+            sROM3, sSPI6, sREGR, sREGW: begin
+                cpuDSACKn <= 2'b10;
+                cpuAVECn <= 1'b1;
+            end
+            sVID1: begin
+                cpuDSACKn[0] <= vidACKn;
+                cpuDSACKn[1] <= 1'b1;
+                cpuAVECn <= 1'b1;
+            end
+            sKBD1: begin
+                cpuDSACKn[0] <= keyACKn;
+                cpuDSACKn[1] <= 1'b1;
+                cpuAVECn <= 1'b1;
+            end
+            sAVEC: begin
                 cpuDSACKn <= 2'b11;
-                cpuBERRn <= 1;
-                romCEn <= 1;
-                sysMRDn <= 1;
-                sysMWRn <= 1;
-                cpuDataHiHi <= 8'bZZZZZZZZ;
-                spioCEn <= 1;
-                keyATNn <= 1;
-                vidCEn <= 1;
-                isaCEn <= 1;
-                fpuCEn <= 1;
-                ramCEn <= 1;
-                cpuCIINn <= 1;
-                cpuAVECn <= 1;
-                if(!cpuASn) begin
-                    // CPU has started a bus cycle
-                    if(cpuFC == 3'b111) begin
-                        // this is a CPU space cycle
-                        if(cpuAddrHi == 0 && cpuAddrMid == 4'h2) begin
-                            // this is an coprocessor cycle
-                            if(!fpuSENSEn) begin
-                                // FPU is present
-                                fpuCEn <= 0;
-                                timingState <= sEXT;
-                            end else begin
-                                // FPU is not present, BERR
-                                timingState <= sBRR;
-                            end
-                        end else if(cpuAddrHi == 11'h7ff && cpuAddrMid == 4'hf) begin
-                            // this is an IRQ cycle, for now just assert AVEC
-                            cpuAVECn <= 0;
-                            timingState <= sEND;
-                        end else begin
-                            // this is an unsupported CPU cycle
-                            timingState <= sBRR;
-                        end
-                    end else begin
-                        // this is a normal memory space cycle
-                        if(cpuAddrHi[10:3] == 8'he0) begin
-                            // this is a bus controller register cycle
-                            if(cpuRWn) begin
-                                // bus controller register read cycle
-                                timingState <= sRRD;
-                            end else begin
-                                // bus controller register write cycle
-                                timingState <=sRWR;
-                            end
-                        end else if(cpuAddrHi[10:3] == 8'h00) begin
-                            /*// this is a rom cycle
-                            timingState <= sRM1;
-                            romCEn <= 0;
-                            if(cpuRWn) begin
-                                // rom read cycle
-                                sysMRDn <= 0;
-                            end else begin
-                                // rom write cycle
-                                sysMWRn <= 0;
-                            end*/
-                            cpuCIINn <= 1;
-                            if(~regSets[0] & cpuRWn) begin
-                                // overlay ROM Read cycle
-                                timingState <= sRM1;
-                                romCEn <= 0;
-                                sysMRDn <= 0;
-                            end else begin
-                                // DRAM cycle
-                                timingState <= sEXT;
-                                ramCEn <= 0;
-                            end
-                        end else if(cpuAddrHi[10:3] == 8'hdc) begin
-                            // this is an S/P I/O cycle
-                            timingState <= sSP1;
-                            spioCEn <= 0;
-                            cpuCIINn <= 0;
-                        end else if(cpuAddrHi[10:3] == 8'hd0) begin
-                            // this is a video cycle
-                            vidCEn <= 0;
-                            berrTimer <= 8'hff;
-                            timingState <= sEXT;
-                        end else if(cpuAddrHi[10:4] == 7'b1101001) begin
-                            // this is an ISA bus cycle
-                            isaCEn <= 0;
-                            berrTimer <= 8'hff;
-                            timingState <= sEXT;
-                            if(cpuAddrHi[3]) begin
-                                // this is an ISA I/O cycle, inhibit cache
-                                cpuCIINn <= 0;
-                            end
-                        end else if(cpuAddrHi[10:3] == 8'hde) begin
-                            // this is a keyboard controller access cycle
-                            keyATNn <= 0;
-                            berrTimer <= 8'hff;
-                            timingState <= sEXT;
-                            cpuCIINn <= 0;
-                        end else if(cpuAddrHi[10:3] == 8'hf0) begin
-                            // this is a normal ROM access cycle
-                            romCEn <= 0;
-                            timingState <= sRM1;
-                            if(cpuRWn) sysMRDn <= 0;
-                            else sysMWRn <= 0;
-                        end else begin
-                            // requested address not addressed by bus controller
-                            // start a bus error countdown
-                            berrTimer <= 8'hff;
-                            timingState <= sEXT;
-                            cpuCIINn <= 0;
-                        end
-                    end
-                end else begin
-                    // keep idling
-                    timingState <= sIDL;
-                end
+                cpuAVECn <= 1'b0;
             end
-            sEND: begin
-                // cycle end state. Proceed to sIDL when CPU deasserts cpuASn, otherwise hold here
-                if(cpuASn) begin
-                    timingState <= sIDL;
-                    cpuDSACKn <= 2'b11;
-                    cpuBERRn <= 1;
-                end else begin
-                    timingState <= sEND;
-                end
+            sFPU1, sEXT: begin
+                cpuDSACKn <= sysACKn;
+                cpuAVECn <= 1'b1;
             end
-            sRM1: begin
-                // ROM1 state. Wait state 0. Proceed immediately to sRM2
-                timingState <= sRM2;
+            sISA1: begin
+                cpuDSACKn[1] <= isaACK16n;
+                cpuDSACKn[0] <= isaACK8n;
+                cpuAVECn <= 1'b1;
             end
-            sRM2: begin
-                // ROM2 state. Wait state 1. Proceed immediately to sRM3
-                timingState <= sRM3;
+            default: begin
+                cpuDSACKn <= 2'b11;
+                cpuAVECn <= 1'b1;
             end
-            sRM3: begin
-                // ROM3 state. Wait state 2. Proceed immediately to sRM4
-                timingState <= sRM4;
+        endcase
+    end
+end
+// CIIN
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        cpuCIINn <= 1'b1;
+    end else begin
+        case(nextState)
+            sIDLE, sROM0, sROM1, sROM2, sROM3, sDRAM: begin
+                cpuCIINn <= 1'b1;
             end
-            sRM4: begin
-                // ROM4 state. Assert DSACK0. Proceed immediately to sEND
-                cpuDSACKn <= 2'b10;
-                timingState <= sEND;
+            default: begin
+                cpuCIINn <= 1'b0;
             end
-            sRRD: begin
-                // register read state. Assert DSACK0 and put regSets on data bus. 
-                // Proceed immediately to sEND
-                timingState <= sEND;
-                cpuDSACKn <= 2'b10;
-                cpuDataHiHi <= regSets;
-            end
-            sRWR: begin
-                // register write state. Assert DSACK0. Data write to register
-                // will be handled by another function on opposite clock edge.
-                // Proceed immediately to sEND
-                timingState <= sEND;
-                cpuDSACKn <= 2'b10;
-            end
-            sSP1: begin
-                // SPIO1 state. Wait state 1. Assert read/write strobe
-                // Proceed immediately to sSP2
+        endcase
+    end
+end
+// CPU Data bus
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        cpuDataHiHi <= 8'bZZZZZZZZ;
+    end else begin
+        if(nextState == sREGR) begin
+            cpuDataHiHi[0] <= regOverlay;
+            cpuDataHiHi[1] <= regPower;
+            cpuDataHiHi[2] <= regGPIO;
+            cpuDataHiHi[7:3] <= 5'h00;
+        end else begin
+            cpuDataHiHi <= 8'bZZZZZZZZ;
+        end
+    end
+end
+// bus error signal
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        cpuBERRn <= 1'b1;
+    end else begin
+        if(nextState == sBERR) begin
+            cpuBERRn <= 1'b0;
+        end else begin
+            cpuBERRn <= 1'b1;
+        end
+    end
+end
+// read/write strobe signals
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        sysMRDn <= 1'b1;
+        sysMWRn <= 1'b1;
+    end else begin
+        case(nextState)
+            sROM0, sROM1, sROM2, sROM3, sSPI1, sSPI2, sSPI3, sSPI4, sSPI5, sSPI6: begin
                 if(cpuRWn) begin
-                    sysMRDn <= 0;
+                    sysMRDn <= 1'b0;
+                    sysMWRn <= 1'b1;
                 end else begin
-                    sysMWRn <= 0;
-                end
-                timingState <= sSP2;
-            end
-            sSP2: begin
-                timingState <= sSP3;
-            end
-            sSP3: begin
-                timingState <= sSP4;
-            end
-            sSP4: begin
-                timingState <= sSP5;
-            end
-            sSP5: begin
-                timingState <= sSP6;
-            end
-            sSP6: begin
-                timingState <= sEND;
-                cpuDSACKn <= 2'b10;
-            end
-            sEXT: begin
-                if(sysACKn[0] & sysACKn[1] & vidACKn & keyACKn & isaACK16n & isaACK8n & ramACKn) begin
-                    // no external device is trying to end a cycle
-                    if(berrTimer != 0) begin
-                        // timeout countdown has not yet expired
-                        berrTimer <= berrTimer - 1;
-                        timingState <= sEXT;
-                    end else begin
-                        // bus error timer has expired
-                        // assert cpuBERRn and move to cycle end
-                        cpuBERRn <= 0;
-                        timingState <= sEND;
-                    end
-                end else begin
-                    // external device is ending a bus cycle
-                    /*if(!ramACKn) begin
-                        cpuSTERMn <= 0;
-                    end else begin*/
-                        cpuDSACKn[0] <= sysACKn[0] & vidACKn & keyACKn & isaACK8n;
-                        cpuDSACKn[1] <= sysACKn[1] & isaACK16n;
-                    //end
-                    timingState <= sEND;
+                    sysMRDn <= 1'b1;
+                    sysMWRn <= 1'b0;
                 end
             end
-            sBRR: begin
-                // immediate bus error state
-                // assert cpuBERRn and move to cycle end
-                cpuBERRn <= 0;
-                timingState <= sEND;
-            end
-            default:  begin
-                // how did we get here?
-                timingState <= sIDL;
+            default: begin
+                sysMRDn <= 1'b1;
+                sysMWRn <= 1'b1;
             end
         endcase
     end
 end
 
-// load data into settings register
-always @(negedge sysClk) begin
-    if(timingState == sRWR) begin
-        regSets <= cpuDataHiHi;
-    end
+// asynchronous control signals
+always_comb begin
+     fpuCEn = 1'b1;
+     romCEn = 1'b1;
+     vidCEn = 1'b1;
+     keyATNn = 1'b1;
+     spioCEn = 1'b1;
+     isaCEn = 1'b1;
+     ramCEn = 1'b1;
+     case(timingState)
+        sFPU0, sFPU1: fpuCEn = 1'b0;
+        sROM0, sROM1, sROM2, sROM3: romCEn = 1'b0;
+        sVID0, sVID1: vidCEn = 1'b0;
+        sKBD0, sKBD1: keyATNn = 1'b0;
+        sSPI0, sSPI1, sSPI2, sSPI3, sSPI4, sSPI5, sSPI6: spioCEn = 1'b0;
+        sISA0, sISA1: isaCEn = 1'b0;
+        sDRAM: ramCEn = 1'b0;
+        default: begin
+            fpuCEn = 1'b1;
+            romCEn = 1'b1;
+            vidCEn = 1'b1;
+            keyATNn = 1'b1;
+            spioCEn = 1'b1;
+            isaCEn = 1'b1;
+            ramCEn = 1'b1;
+        end
+     endcase
 end
 
 always_comb begin
-    //sysPWRON <= 0;
-    sysPWRON <= regSets[1];
-    sysLEDdebug <= regSets[2];
-
-    // on power on, hold RESET low until the power supply pulls PWR_OK high.
-    if(sysPWROK) begin
-        sysRESETn <= 1'bZ;
-    end else begin
-        sysRESETn <= 1'b0;
-    end
+    sysPRWONn = regPower;
+    sysLEDdebug = regGPIO;
 end
-    
+
 endmodule
