@@ -19,6 +19,77 @@ module dramCtrl (
     output  reg  [3:0]      memRASn         // DRAM row address strobes
 );
 
+// primary DRAM controller state machine
+parameter
+    sIDLE   =   0,  // Idle state
+    sROW0   =   1,  // Cycle ROW state
+    sCOL0   =   2,  // Cycle COL state 0
+    sCOL1   =   3,  // Cycle COL state 1
+    sBRST   =   4,  // Burst Cycle state
+    sBEND   =   5,  // Burst End state
+    sRFH0   =   6,  // Refresh 0 state
+    sRFH1   =   7,  // Refresh 1 state
+    sRFH2   =   8,  // Refresh 2 state
+    sRFH3   =   9,  // Refresh 3 state
+    sREGW   =  10;  // Register Write state
+reg [3:0] timingState, nextState;
+
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        timingState <= sIDLE;
+    end else begin
+        timingState <= nextState;
+    end
+end
+
+always @(*) begin
+    nextState = timingState;
+    case(timingState)
+        sIDLE: begin
+            if(refreshCall) begin
+                nextState = sRFH0;
+            end else if(!ramCEn) begin
+                if(cpuAddr[29] & cpuAddr[28] & !cpuRWn) begin
+                    // do a register write cycle
+                    nextState = sREGW;
+                end else begin
+                    // do a regular CPU read/write cycle
+                    nextState = sROW0;
+                end
+            end else begin
+                nextState = sIDLE;
+            end
+        end
+
+        // normal access cycle sequence
+        sROW0: nextState = sCOL0;
+        sCOL0: nextState = sCOL1;
+        sCOL1: begin
+            if(!cpuCBREQn) begin
+                nextState = sBRST;
+            end else begin
+                nextState = sIDLE;
+            end
+        end
+        sBRST: begin
+            if(!cpuCBREQn) begin
+                nextState = sCOL1;
+            end else begin
+                nextState = sBEND;
+            end
+        end
+        sBEND: nextState = sIDLE;
+
+        // CBR refresh sequence
+        sRFH0: nextState = sRFH1;
+        sRFH1: nextState = sRFH2;
+        sRFH2: nextState = sRFH3;
+        sRFH3: nextState = sIDLE;
+
+        default: nextState = sIDLE;
+    endcase
+end
+
 // settings registers
 reg [1:0] rRowSize, rColSize;
 
@@ -92,197 +163,37 @@ bus030selects modCAScalc
     .wordSELn()
 );
 
-// initialization timer
-reg [12:0] initCount;
-always @(posedge sysClk, negedge sysRESETn) begin
-    if(!sysRESETn) begin
-        initCount <= 13'd5000;
-        //initCount <= 13'd0010;          // <=== set low for testing purposes!
-    end else begin
-        if(initCount > 0) begin
-            initCount <= initCount - 13'd1;
-        end else begin
-            initCount <= 13'd0;
-        end
-    end
-end
-
 // refresh timing counter
 reg [8:0] refreshTimer;
 reg refreshCall, refreshAck;
-reg [2:0] initRfshCount;
+//reg [3:0] initRfshCount;
 always @(posedge sysClk, negedge sysRESETn) begin
     if(!sysRESETn) begin
         refreshTimer <= 0;
         refreshCall <= 0;
-    end else if(refreshTimer >= 390) begin
+    end else if(refreshTimer >= 9'h186) begin   // 390 cycles @ 25MHz = 15.6us
         refreshCall <= 1;
         refreshTimer <= 0;
     end else begin
         refreshTimer = refreshTimer + 9'h001;
         if(refreshAck) refreshCall <= 0;
     end
+    /*else if(initRfshCount >= 4'h8) begin
+        refreshTimer = refreshTimer + 9'h001;
+        if(refreshAck) refreshCall <= 0;
+    end*/
 end
 
 always @(negedge sysClk, negedge sysRESETn) begin
     if(!sysRESETn) begin
         refreshAck <= 0;
     end else begin
-        if(nextState == sRC0) begin
+        if(nextState == sRFH0) begin
             refreshAck <= 1;
         end else begin
             refreshAck <= 0;
         end
     end
-end
-
-// initRfshCount counts 8 refresh cycles immediately following the reset
-// initialization hold sequence. It is incremented when the state machine
-// is in the middle of the refresh sequence, and held there until reset
-always @(negedge sysClk, negedge sysRESETn) begin
-    if(!sysRESETn) begin
-        initRfshCount <= 0;
-    end else begin
-        if(initRfshCount != 3'd7) begin
-            if(timingState == sRR2) begin
-                initRfshCount <= initRfshCount + 3'd1;
-            end
-        end
-    end
-end
-
-// primary DRAM controller state machine
-parameter
-    sIDL    =   0,  //  Idle state
-    sCR0    =   1,  //  Cycle RAS state 0
-    sCC0    =   2,  //  Cycle CAS state 0
-    sCC1    =   3,  //  Cycle CAS state 1
-    sBST    =   4,  //  Burst Cycle state
-    sBND    =   5,  //  Burst End state
-    sRC0    =   6,  //  Refresh CAS state 0
-    sRR0    =   7,  //  Refresh RAS state 0
-    sRR1    =   8,  //  Refresh RAS state 1
-    sRR2    =   9,  //  Refresh RAS state 2
-    sINIT   =  10,  //  Startup initialization state
-    sREG    =  11;  //  Write configuration registers state
-reg [3:0] timingState, nextState;
-
-always @(negedge sysClk, negedge sysRESETn) begin
-    if(!sysRESETn) begin
-        timingState <= sINIT;
-    end else begin
-        timingState <= nextState;
-    end
-end
-
-always @(timingState, ramCEn, cpuCBREQn, refreshCall, initRfshCount, initCount, cpuAddr, cpuRWn) begin
-    nextState = timingState;
-    case(timingState)
-        sINIT: begin
-            // Startup initialization state
-            // hold here until initCount is 0
-            // then move on to sRC0 to start a series of 8 refresh cycles
-            if(initCount > 0) begin
-                nextState = sINIT;
-            end else begin
-                nextState = sRC0;
-            end
-        end
-        sIDL: begin
-            // Idle state
-            // if time for refresh, then move to sRC0
-            // else if time for CPU cycle then move to sCR0
-            // else stay at Idle
-            if(refreshCall) begin
-                nextState = sRC0;
-            end else if(!ramCEn) begin
-                if(cpuAddr[29] & cpuAddr[28] & !cpuRWn) begin
-                    // do a register write cycle
-                    nextState = sREG;
-                end else if(cpuAddr[29] & cpuAddr[28] & cpuRWn) begin
-                    // this is an attempt to read the config registers, which
-                    // is not possible. Instead of trying to start any kind of
-                    // bus cycle, we'll stay at sIDL. This will (eventually)
-                    // cause the bus controller to assert bus error
-                    nextState = sIDL;
-                end else begin
-                    // do a regular CPU read/write cycle
-                    nextState = sCR0;
-                end
-            end else begin
-                nextState = sIDL;
-            end
-        end
-        sCR0: begin
-            // Cycle RAS state 0
-            // always progress immediately to sCC0
-            nextState = sCC0;
-        end
-        sCC0: begin
-            // Cycle CAS state 0
-            // always progress immediately to sCC1
-            nextState = sCC1;
-        end
-        sCC1: begin
-            // Cycle CAS state 1
-            // if cache burst, then proceed to sBST
-            // else progress to sIDL to end cycle
-            if(!cpuCBREQn) begin
-                nextState = sBST;
-            end else begin
-                nextState = sIDL;
-            end
-        end
-        sBST: begin
-            // Cycle burst state
-            // if cpu cache burst request still asserted then proceed to sCC1
-            // else proceed to sBND to end cycle
-            if(!cpuCBREQn) begin
-                nextState = sCC1;
-            end else begin
-                nextState = sBND;
-            end
-        end
-        sBND: begin
-            // Cycle burst end
-            // always proceed to sIDL to end cycle
-            nextState = sIDL;
-        end
-        sRC0: begin
-            // Refresh cycle CAS state 0
-            // always proceed to sRR0
-            nextState = sRR0;
-        end
-        sRR0: begin
-            // Refresh cycle RAS state 0
-            // always proceed to sRR1
-            nextState = sRR1;
-        end
-        sRR1: begin
-            // Refresh cycle RAS state 1
-            // always proceed to sRR2
-            nextState = sRR2;
-        end
-        sRR2: begin
-            // Refresh cycle RAS state 2
-            // if initialization is not complete, then start another refresh cycle
-            // else procede to sIDL
-            if(initRfshCount != 3'd7) begin
-                nextState = sINIT;
-            end else begin
-                nextState = sIDL;
-            end
-        end
-        sREG: begin
-            // Register write state
-            // procede to sIDL
-            nextState = sIDL;
-        end
-        default: begin
-            // how did we get here?
-            nextState = sIDL;
-        end
-    endcase
 end
 
 // set configuration registers
@@ -292,7 +203,7 @@ always @(posedge sysClk, negedge sysRESETn) begin
         rRowSize <= 2'h2;
         rColSize <= 2'h2;
     end else begin
-        if(timingState == sREG) begin
+        if(timingState == sREGW) begin
             rRowSize <= cpuAddr[11:10];
             rColSize <= cpuAddr[9:8];
         end
@@ -300,6 +211,44 @@ always @(posedge sysClk, negedge sysRESETn) begin
 end
 
 // memory address output
+// burst address calculation
+reg[1:0] burstAddr;
+always @(posedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        burstAddr <= 0;
+    end else begin
+        if(timingState == sIDLE & !cpuASn) begin
+            burstAddr <= cpuAddr[3:2];
+        end else if(timingState == sCOL1) begin
+            burstAddr <= burstAddr + 2'h1;
+        end
+    end
+end
+// double-buffered to meet timing requirements
+wire [11:0] nextMemAddr;
+always_comb begin
+    case(nextState)
+    sROW0: begin
+        nextMemAddr <= memAddrRow;
+    end
+    sCOL0, sCOL1, sBRST, sBEND: begin
+        nextMemAddr[11:2] <= memAddrCol[11:2];
+        nextMemAddr[1:0] <= burstAddr;
+    end
+    default:
+        nextMemAddr <= 0;
+    endcase
+end
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        memAddr <= 0;
+    end else begin
+        memAddr <= nextMemAddr;
+    end
+end
+
+
+/*
 reg[1:0] burstAddr;
 always @(negedge sysClk, negedge sysRESETn) begin
     if(!sysRESETn) begin
@@ -307,123 +256,103 @@ always @(negedge sysClk, negedge sysRESETn) begin
         burstAddr <= 0;
     end else begin
         case(nextState)
-            sCR0: begin
-                // output row address
+            sROW0: begin
+                // output cycle row address
                 memAddr <= memAddrRow;
-                // and store initial burst address value
+                // and store the initial burst address value
                 burstAddr <= cpuAddr[3:2];
             end
-            sCC0, sBST: begin
-                // output column address
+            sCOL0, sBRST: begin
+                // output cycle column address
                 memAddr[11:2] <= memAddrCol[11:2];
                 // output burst address
                 memAddr[1:0] <= burstAddr;
             end
-            sCC1: begin
-                // update burst address
+            sCOL1: begin
                 burstAddr <= burstAddr + 2'h1;
             end
         endcase
     end
 end
+*/
 
-// row & column strobe outputs
-// these are double-buffered to ensure timing, given everything that goes into
-// calculating each signal (especially CAS)
-reg [3:0] nextMemCASn, nextMemRASn;
-
-// calculate nextMemRASn
-always @(posedge sysClk, negedge sysRESETn) begin
-    if(!sysRESETn) begin
-        nextMemRASn <= 4'b1111;
-    end else begin
-        case(nextState)
-            sCR0, sCC0, sCC1, sBST, sBND: begin
-                // cpu access cycle
-                nextMemRASn <= rasCalcExpn;
-            end
-            sRR0, sRR1, sRR2: begin
-                // refresh cycle
-                nextMemRASn <= 4'b0000;
-            end
-            default: begin
-                nextMemRASn <= 4'b1111;
-            end
-        endcase
-    end
-end
-
-// calculate nextMemCASn
-always @(posedge sysClk, negedge sysRESETn) begin
-    if(!sysRESETn) begin
-        nextMemCASn <= 4'b1111;
-    end else begin
-        case(nextState)
-            sCC0, sCC1, sBND: begin
-                // cpu access cycle
-                nextMemCASn <= casCalcExpn;
-            end
-            sRC0, sRR0, sRR1: begin
-                nextMemCASn <= 4'b0000;
-            end
-            sINIT: begin
-                // this is to catch a special case at the end of the initialization cycle
-                if(initCount == 1) nextMemCASn <= 4'b0000;
-                else nextMemCASn <= 4'b1111;
-            end
-            default: begin
-                nextMemCASn <= 4'b1111;
-            end
-        endcase
-    end
-end
-
-// now actually output RAS/CAS signals
+// output row & column strobes
 always @(negedge sysClk, negedge sysRESETn) begin
     if(!sysRESETn) begin
         memRASn <= 4'b1111;
+    end else begin
+        case(nextState)
+            sROW0, sCOL0, sCOL1, sBRST, sBEND: begin
+                // cpu access cyle
+                memRASn <= rasCalcExpn;
+            end
+            sRFH1, sRFH2, sRFH3: begin
+                // refresh cycle
+                memRASn <= 4'b0000;
+            end
+            default: begin
+                memRASn <= 4'b1111;
+            end
+        endcase
+    end
+end
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
         memCASn <= 4'b1111;
     end else begin
-        memRASn <= nextMemRASn;
-        memCASn <= nextMemCASn;
+        case(nextState)
+            sCOL0, sCOL1, sBEND: begin
+                // cpu access cycle
+                memCASn <= casCalcExpn;
+            end
+            sRFH0, sRFH1, sRFH2: begin
+                // refresh cycle
+                memCASn <= 4'b0000;
+            end
+            default: begin
+                memCASn <= 4'b1111;
+            end
+        endcase
     end
 end
 
-// misc other control signals output
-always_comb begin
-    case(timingState)
-        sCR0, sCC0: begin
-            cpuCBACKn = cpuCBREQn;
-            ramACKn = 1;
-            memWEn = cpuRWn;
-        end
-        sCC1: begin
-            cpuCBACKn = cpuCBREQn;
-            ramACKn = 0;
-            memWEn = cpuRWn;
-        end
-        sBST: begin
-            cpuCBACKn = 0;
-            ramACKn = 1;
-            memWEn = cpuRWn;
-        end
-        sBND: begin
-            cpuCBACKn = 1;
-            ramACKn = 0;
-            memWEn = cpuRWn;
-        end
-        sREG: begin
-            cpuCBACKn = 1;
-            if(cpuRWn) ramACKn = 1;
-            else ramACKn = 0;
-            memWEn = cpuRWn;
-        end
-        default: begin
-            cpuCBACKn = 1;
-            ramACKn = 1;
-            memWEn = 1;
-        end
-    endcase
+// other contol signal outputs
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        cpuCBACKn <= 1;
+    end else begin
+        case(nextState)
+            sROW0, sCOL0, sCOL1, sBRST, sBEND: begin
+                if(!cpuCBREQn) cpuCBACKn <= 0;
+                else cpuCBACKn <= 1;
+            end
+            default: cpuCBACKn <= 1;
+        endcase
+    end
 end
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        ramACKn <= 1;
+    end else begin
+        case(nextState)
+            sCOL1, sBEND: ramACKn <= 0;
+            default: ramACKn <= 1;
+        endcase
+    end
+end
+always @(negedge sysClk, negedge sysRESETn) begin
+    if(!sysRESETn) begin
+        memWEn = 1;
+    end else begin
+        case(nextState)
+            sROW0, sCOL0, sCOL1, sBRST, sBEND: begin
+                if(cpuRWn) memWEn <= 1;
+                else memWEn <= 0;
+            end
+            default: memWEn <= 1;
+        endcase
+    end
+end
+
 
 endmodule
