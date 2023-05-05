@@ -101,23 +101,29 @@ always_comb begin
                     end
                 end else begin
                     // memory space
-                    case(cpuAddrHi[10:3])
-                        8'h00: begin
-                            // DRAM space or overlay ROM read
-                            if(!regOverlay & cpuRWn) nextState = sROM0;
-                            else nextState = sDRAM;
-                        end
-                        8'hf0: nextState = sROM0;
-                        8'hd0: nextState = sVID0;
-                        8'hd2, 8'hd3: nextState = sISA0;
-                        8'hdc: nextState = sSPI0;
-                        8'hde: nextState = sKBD0;
-                        8'he0: begin
-                            if(cpuRWn) nextState = sREGR;
-                            else nextState = sREGW;
-                        end
-                        default: nextState = sEXT;
-                    endcase
+                    if(cpuAddrHi[10:9] == 0) begin
+                        // DRAM space or overlay ROM read
+                        if(!regOverlay & cpuRWn) nextState = sROM0;
+                        else nextState = sDRAM;
+                    end else begin
+                        case(cpuAddrHi[10:3])
+                            /*8'h00: begin
+                                // DRAM space or overlay ROM read
+                                if(!regOverlay & cpuRWn) nextState = sROM0;
+                                else nextState = sDRAM;
+                            end*/
+                            8'hf0: nextState = sROM0;
+                            8'hd0: nextState = sVID0;
+                            8'hd2, 8'hd3: nextState = sISA0;
+                            8'hdc: nextState = sSPI0;
+                            8'hde: nextState = sKBD0;
+                            8'he0: begin
+                                if(cpuRWn) nextState = sREGR;
+                                else nextState = sREGW;
+                            end
+                            default: nextState = sEXT;
+                        endcase 
+                    end
                 end
             end else begin
                 nextState = sIDLE;
