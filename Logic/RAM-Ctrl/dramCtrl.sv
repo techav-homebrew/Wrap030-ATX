@@ -86,6 +86,8 @@ always @(*) begin
         sRFH2: nextState = sRFH3;
         sRFH3: nextState = sIDLE;
 
+        sREGW: nextState = sIDLE;
+
         default: nextState = sIDLE;
     endcase
 end
@@ -335,7 +337,7 @@ always @(negedge sysClk, negedge sysRESETn) begin
         ramACKn <= 1;
     end else begin
         case(nextState)
-            sCOL1, sBEND: ramACKn <= 0;
+            sCOL1, sBEND, sREGW: ramACKn <= 0;
             default: ramACKn <= 1;
         endcase
     end
