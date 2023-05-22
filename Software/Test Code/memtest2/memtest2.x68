@@ -1,7 +1,10 @@
 romAddr     equ $f0000000
 romBot      equ $00000000
 ramBot      equ $00000000
-ramTop      equ $01ffffff
+;ramTop      equ $01ffffff
+; set up program to only test the first 8MB in the first SIMM slot
+ramTop      equ $007fffff
+
 stackInit   equ $10000000
 
 romSect0    equ    romBot+$00000
@@ -406,7 +409,12 @@ initCOM0:
     lea     strCOM0(PC),A1        ; get pointer to string
     prntStr                     ; call print string macro
 
-;***********************************************************
+;******************************************************************************
+; MEMORY TEST 1
+; This first memory test writes $0000,0000 to every declared memory address,
+; starting from the top of memory, then circles back around to make sure each
+; address still reads $0000,0000
+;
 
 memTest1:
     lea     busCtrlPort,A6
@@ -416,16 +424,17 @@ memTest1:
     lea     strMemTest1(PC),A1      ; print start of string 1
     prntStr
     moveq.l #0,D5                   ; clear test pattern
-    move.l  #$01FF,D7               ; set high word counter
+;    move.l  #$01FF,D7               ; set high word counter
+    move.l  #ramTop>>16,D7           ; set high word counter
     lea     ramTop+1,A0             ; initialize memory pointer
 memTest1OuterLp:
     move.l  #$3fff,D6               ; set low word counter
-    lea     strMemT1addr(PC),A1     ; print page string
-    prntStr
-    move.l  D7,D0                   ; get page
-    prntWord                        ; print page number
-    lea     strCRLF(PC),A1          ; print CRLF
-    prntStr
+;    lea     strMemT1addr(PC),A1     ; print page string
+;    prntStr
+;    move.l  D7,D0                   ; get page
+;    prntWord                        ; print page number
+;    lea     strCRLF(PC),A1          ; print CRLF
+;    prntStr
 memTest1InnerLp:
     move.l  D5,-(A0)                ; write pattern to memory
     dbra    D6,memTest1InnerLp      ; continue inner loop
@@ -433,16 +442,17 @@ memTest1InnerLp:
     dbra    D7,memTest1OuterLp      ; continue outer loop
 ; at this point, we should have cleared all of main memory
 ; now we need to test and confirm it is all 0
-    move.l  #$01FF,D7               ; set high word counter
+;    move.l  #$01FF,D7               ; set high word counter
+    move.l  #ramTop>>16,D7           ; set high word counter
     lea     ramTop+1,A0             ; initialize memory pointer
 memTest1OuterLp1:
     move.l  #$3fff,D6               ; set low word counter
-    lea     strMemT1addr1(PC),A1    ; print page string
-    prntStr
-    move.l  D7,D0                   ; get page
-    prntWord                        ; print page number
-    lea     strCRLF(PC),A1          ; print CRLF
-    prntStr
+;    lea     strMemT1addr1(PC),A1    ; print page string
+;    prntStr
+;    move.l  D7,D0                   ; get page
+;    prntWord                        ; print page number
+;    lea     strCRLF(PC),A1          ; print CRLF
+;    prntStr
 memTest1InnerLp1:
     move.l  -(A0),D4                ; read pattern from memory
     cmp.l   D4,D5                   ; check if it matches
@@ -481,240 +491,278 @@ strMemT1err3:   dc.b    ', Expected $',0
 
     even
 
-; memTest1:
-;     lea     strTestStart(PC),A1     ;get test start string
-;     prntStr                         ;and print
-;     lea     strMemTest1(PC),A1      ;print specific test header
-;     prntStr
-;     moveq   #0,D0                   ;clear D0
-;     movea.l #ramBot,A0              ;get bottom of RAM
-; memTest1a:  
-;     move.l  D0,(A0)                 ;copy D0 to RAM address
-;     move.l  (A0)+,D1                ;copy value back from RAM
-;     cmp.l   D0,D1                   ;make sure they match
-;     bne.s   memTest1err             ;jump if error
-;     cmpa.l  #ramTop,A0              ;check for top of RAM
-;     blt.s   memTest1a               ;continue loop
-;     lea     strTest1(PC),A1         ;get address of Test1 Complete string
-;     prntStr                         ;print Test1 Complete string
-;     bra     memTest2                ;move on to test2
-; memTest1err:
-;     move.l  D1,D7                   ;save result
-;     lea     strErr1(PC),A1          ;get error header string
-;     prntStr                         ;print error header string
-;     move.l  -(A0),D0                ;get failed address
-;     prntLWord                       ;print failed address
-;     lea     strErr1a(PC),A1         ;get error second string
-;     prntStr                         ;and print
-;     move.l  D7,D0                   ;get read result
-;     prntLWord                       ;and print
-;     lea     strCRLF(PC),A1          ;get newline
-;     prntStr                         ;and print
+;******************************************************************************
+; MEMORY TEST 2
+; This first memory test writes $ffff,ffff to every declared memory address,
+; starting from the top of memory, then circles back around to make sure each
+; address still reads $ffff,ffff
+;
 
 memTest2:
-    lea     strMemTest2(PC),A1      ;print specific test header
+    lea     busCtrlPort,A6
+    andi.b  #$fb,(A6)               ; turn off debug LED
+    lea     strMemTest2(PC),A1      ; print start of string 1
     prntStr
-    moveq   #0,D0                   ;clear D0
-    not.l   D0                      ;invert D0 ($FFFFFFFF)
-    movea.l #ramBot,A0              ;get bottom of RAM
-memTest2a:  
-    move.l  D0,(A0)                 ;copy D0 to RAM address
-    move.l  (A0)+,D1                ;copy value back from RAM
-    cmp.l   D0,D1                   ;make sure they match
-    bne.s   memTest2err             ;jump if error
-    cmpa.l  #ramTop,A0           ;check for top of RAM
-    blt.s   memTest2a               ;continue loop
-    lea     strTest2(PC),A1         ;get address of Test2 Complete string
-    prntStr                         ;print Test2 Complete string
-    bra     memTest3                ;move on to test3
+    move.l  #$ffffffff,D5           ; set test pattern
+;    move.l  #$01FF,D7               ; set high word counter
+    move.l  #ramTop>>16,D7           ; set high word counter
+    lea     ramTop+1,A0             ; initialize memory pointer
+memTest2OuterLp:
+    move.l  #$3fff,D6               ; set low word counter
+;    lea     strMemT2addr(PC),A1     ; print page string
+;    prntStr
+;    move.l  D7,D0                   ; get page
+;    prntWord                        ; print page number
+;    lea     strCRLF(PC),A1          ; print CRLF
+;    prntStr
+memTest2InnerLp:
+    move.l  D5,-(A0)                ; write pattern to memory
+    dbra    D6,memTest2InnerLp      ; continue inner loop
+    eori.b  #$4,(A6)                ; toggle debug LED
+    dbra    D7,memTest2OuterLp      ; continue outer loop
+; at this point, we should have cleared all of main memory
+; now we need to test and confirm it is all 0
+;    move.l  #$01FF,D7               ; set high word counter
+    move.l  #ramTop>>16,D7           ; set high word counter
+    lea     ramTop+1,A0             ; initialize memory pointer
+memTest2OuterLp1:
+    move.l  #$3fff,D6               ; set low word counter
+;    lea     strMemT2addr1(PC),A1    ; print page string
+;    prntStr
+;    move.l  D7,D0                   ; get page
+;    prntWord                        ; print page number
+;    lea     strCRLF(PC),A1          ; print CRLF
+;    prntStr
+memTest2InnerLp1:
+    move.l  -(A0),D4                ; read pattern from memory
+    cmp.l   D4,D5                   ; check if it matches
+    bne     memTest2err             ; no match, print error
+memTest2errRet:
+    dbra    D6,memTest2InnerLp1     ; continue inner loop
+    eori.b  #$4,(A6)                ; toggle debug LED
+    dbra    D7,memTest2OuterLp1     ; continue outer loop
+    bra     memTest2done            ; jump to end
 memTest2err:
+    lea     strMemT2err1(PC),A1     ; print error header string
+    prntStr
+    move.l  A0,D0                   ; get address
+    prntLWord
+    lea     strMemT2err2(PC),A1     ; print error mid string 2
+    prntStr
+    move.l  D4,D0                   ; get bad value
+    prntLWord
+    lea     strMemT2err3(PC),A1     ; print error mid string 3
+    prntStr
+    move.l  D5,D0                   ; get test value
+    prntLWord
+    lea     strCRLF(PC),A1          ; print CRLF
+    prntStr
+    bra     memTest2errRet          ; keep testing
+memTest2done:
+    lea     strTest2(PC),A1         ;get address of Test1 Complete string
+    prntStr                         ;print Test1 Complete string
+    bra     memTest3                ;move on to test2
 
-    move.l  D1,D7                   ;save result
-    lea     strErr2(PC),A1          ;get error header string
-    prntStr                         ;print error header string
-    move.l  -(A0),D0                ;get failed address
-    prntLWord                       ;print failed address
-    lea     strErr2a(PC),A1         ;get error second string
-    prntStr                         ;and print
-    move.l  D7,D0                   ;get read result
-    prntLWord                       ;and print
-    lea     strCRLF(PC),A1          ;get newline
-    prntStr                         ;and print
+strMemT2addr:   dc.b    'Writing $ffff,ffff to page $',0
+strMemT2addr1:  dc.b    'Confirming page $',0
+strMemT2err1:   dc.b    'MemTest2 Error at $',0
+strMemT2err2:   dc.b    '. Read $',0
+strMemT2err3:   dc.b    ', Expected $',0
 
+    even
+
+;******************************************************************************
+; MEMORY TEST 3
+; Writes $AAAA,AAAA and $5555,5555 to alternating addresses starting at top of
+; memory space then reads back to make sure they match
 memTest3:
-    lea     strMemTest3(PC),A1      ;print specific test header
+    lea     busCtrlPort,A6
+    andi.b  #$fb,(A6)               ; turn off debug LED
+    lea     strMemTest3(PC),A1      ; print specific test header
     prntStr
-    move.l  #$AAAAAAAA,D0        ;set up first pattern
-    movea.l #ramBot,A0            ;set up bottom address
-memTest3a:  
-    move.l  D0,(A0)+            ;copy pattern & increment address
-    cmpa.l  #ramTop,A0        ;check for top of RAM
-    blt.s   memTest3a            ;loop until top
-    move.l  #$55555555,D1        ;set up second pattern
-    movea.l #ramBot,A0            ;set up bottom address
-memTest3b:    
-    move.l  (A0),D7            ;read pattern
-    cmp.l   D7,D0                ;compare to first pattern
-    bne     memTest3err1        ;jump to error if different
-memTest3err1ret:
-    move.l  D1,(A0)+            ;write second pattern
-    cmpa.l  #ramTop,A0        ;check for top of RAM
-    blt.s   memTest3b            ;loop until top
-    movea.l #ramTop+1,A0        ;set up top address
-memTest3c:    
-    move.l  -(A0),D7            ;read pattern
-    cmp.l   D7,D1                ;compare to second pattern
-    bne     memTest3err2        ;jump to error if different
-memTest3err2ret:
-    move.l  D0,(A0)            ;write second pattern
-    cmpa.l  #ramBot,A0            ;check for bottom of RAM
-    bgt.s   memTest3c            ;loop until bottom
-    movea.l #ramTop+1,A0        ;set up top address
-memTest3d:  move.l    -(A0),D7            ;read pattern
-    cmp.l   D7,D0                ;compare to first pattern
-    bne     memTest3err3        ;jump to error if different
-memTest3err3ret:
-    cmpa.l  #ramBot,A0            ;check for bottom of RAM
-    bgt.s   memTest3d            ;loop until bottom
-    bra     memTest3end            ;move on to test 4
-memTest3err1:
-    move.l  D0,D6                ;save pattern
-    movea.l A0,A6                ;save address
-    lea     strErr3a0(PC),A1        ;get error string header
-    prntStr                    ;and print
-    move.l  A6,D0                ;get failed RAM address
-    prntLWord                    ;print failed RAM address
-    lea     strErr3a1(PC),A1        ;get error string middle
-    prntStr                    ;and print
-    move.l  D6,D0                ;get pattern
-    prntLWord                    ;and print
-    lea     strErr3a2(PC),A1        ;get error string end
-    prntStr                    ;and print
-    move.l  D7,D0                ;get read value
-    prntLWord                    ;and print
-    lea     strCRLF(PC),A1            ;get newline
-    prntStr                    ;and print
-    move.l  D6,D0                ;restore values
-    movea.l A6,A0                ;
-    bra     memTest3err1ret        ;continue test
-memTest3err2:
-    move.l  D0,D6                ;save pattern 1
-    move.l  D1,D5                ;save pattern 2
-    move.l  A0,A6                ;save address
-    lea     strErr3a0(PC),A1        ;get error string header
-    prntStr                    ;and print
-    move.l  A6,D0                ;get failed RAM address
-    prntLWord                    ;and print
-    lea     strErr3a1(PC),A1        ;get error string middle
-    prntStr                    ;and print
-    move.l  D5,D0                ;get pattern
-    prntLWord                    ;and print
-    lea     strErr3a2(PC),A1        ;get error string end
-    prntStr                    ;and print
-    move.l  D7,D0                ;get read value
-    prntLWord                    ;and print
-    lea     strCRLF(PC),A1            ;get newline
-    prntStr                    ;and print
-    move.l  D6,D0                ;restore values
-    move.l  D5,D1                ;
-    movea.l A6,A0                ;
-    bra     memTest3err2ret        ;continue test
-memTest3err3:
-    move.l  D0,D6                ;save pattern 1
-    move.l  D1,D5                ;save pattern 2
-    move.l  A0,A6                ;save address
-    lea     strErr3a0(PC),A1        ;get error string header
-    prntStr                    ;and print
-    move.l  A6,D0                ;get failed RAM address
-    prntLWord                    ;and print
-    lea     strErr3a1(PC),A1        ;get error string middle
-    prntStr                    ;and print
-    move.l  D6,D0                ;get pattern
-    prntLWord                    ;and print
-    lea     strErr3a2(PC),A1        ;get error string end
-    prntStr                    ;and print
-    move.l  D7,D0                ;get read value
-    prntLWord                    ;and print
-    lea     strCRLF(PC),A1            ;get newline
-    prntStr                    ;and print
-    move.l  D6,D0                ;restore values
-    move.l  D5,D1                ;
-    movea.l A6,A0                ;
-    bra     memTest3err3ret        ;continue test
 
-memTest3end:
-    lea     strTest3(PC),A1        ;get test end string
-    prntStr                    ;and print
-
-memTest4:   
-    lea     strMemTest4(PC),A1      ;print specific test header
+    move.l  #$AAAAAAAA,D5           ; set starting pattern
+;    move.l  #$01FF,D7               ; set high word counter
+    move.l  #ramTop>>16,D7           ; set high word counter
+    lea     ramTop+1,A0             ; intialize memory pointer
+memTest3OuterLp:
+    move.l  #$3fff,D6               ; set low word counter
+;    lea     strMemT3addr(PC),A1     ; print page string
+;    prntStr
+;    move.l  D7,D0                   ; get page
+;    prntWord                        ; print page number
+;    lea     strCRLF(PC),A1          ; print CRLF
+;    prntStr
+memTest3InnerLp:
+    move.l  D5,-(A0)                ; write pattern to memory
+    eor.l   D5,D5                   ; invert pattern for next write
+    dbra    D6,memTest3InnerLp      ; continue inner loop
+    eori    #$4,(A6)                ; toggle debug LED
+    dbra    D7,memTest3OuterLp      ; continue outer loop
+; finished writing patterns, time to confirm
+    move.l  #$AAAAAAAA,D5           ; reinitialize starting pattern
+;   move.l  #$01FF,D7               ; set high word counter
+    move.l  #ramTop>>16,D7           ; set high word counter
+    lea     ramTop+1,A0             ; initialize memory pointer
+memTest3OuterLp1:
+    move.l  #$3fff,D6               ; set low word counter
+;    lea     strMemT3addr1(PC),A1    ; print page string
+;    prntStr
+;    move.l  D7,D0                   ; get page
+;    prntWord                        ; print page number
+;    lea     strCRLF(PC),A1          ; print CRLF
+;    prntStr
+memTest3InnerLp1:
+    move.l  -(A0),D4                ; read pattern from memory
+    cmp.l   D4,D5                   ; check if it matches
+    bne     memTest3err             ; no match, print error
+memTest3errRet:
+    eor.l   D5,D5                   ; invert pattern for next read
+    dbra    D6,memTest3InnerLp1     ; continue inner loop
+    eori.b  #$4,(A6)                ; toggle debug LED
+    dbra    D7,memTest3OuterLp1     ; continue outer loop
+    bra     memTest3done            ; jump to end
+memTest3err:
+    lea     strMemT3err1(PC),A1     ; print error header string
     prntStr
-    movea.l #ramBot,A0            ;clear ram
-memTest4a:    
-    move.l  #0,(A0)+            ;
-    cmpa.l  #ramTop,A0        ;
-    blt     memTest4a            ;
-    movea.l #ramBot,A0            ;set up base address
-memTest4b:    
-    move.b  #$55,(A0)+            ;write alternating pattern
-    move.b  #$AA,(A0)+            ;
-    cmpa.l  #ramTop,A0        ;
-    blt     memTest4b            ;
-    movea.l #ramBot,A0            ;set up base address
-memTest4c:    
-    move.l  (A0),D7            ;read value
-    cmp.l   #$AA55AA55,D7        ;check read value
-    bne     memTest4err1        ;jump to error if not match
+    move.l  A0,D0                   ; get address
+    prntLWord
+    lea     strMemT3err2(PC),A1     ; print error mid string 2
+    prntStr 
+    move.l  D4,D0                   ; get bad value
+    prntLWord
+    lea     strMemT3err3(PC),A1     ; print error mid string 3
+    prntStr
+    move.l  D5,D0                   ; get test value
+    prntLWord
+    lea     strCRLF(PC),A1          ; print CRLF
+    prntStr
+    bra     memTest3errRet          ; keep testing
+memTest3done:
+    lea     strTest3(PC),A1         ; get address of Test3 complete string
+    prntStr                         ; print Test3 Complete string
+    bra     memTest4                ; move on to test3
+
+strMemT3addr:   dc.b    'Writing pattern to page $',0
+strMemT3addr1:  dc.b    'Confirming page $',0
+strMemT3err1:   dc.b    'MemTest3 Error at $',0
+strMemT3err2:   dc.b    '. Read $',0
+strMemT3err3:   dc.b    ', Expected $',0
+
+    even
+
+;******************************************************************************
+; MEMORY TEST 4
+; Writes byte pattern $55, $AA, $11, $88 to memory starting at bottom of RAM
+; then reads back as long words starting from top of RAM, overwriting with
+; byte pattern $33, $CC, $66, $99
+;
+memTest4:
+    eori.b  #$4,(A6)                ; toggle debug LED
+    lea     strMemTest4(PC),A1      ; print specific test header
+    prntStr
+    movea.l #ramBot,A0              ; start by clearing memory
+    eor.l   D0,D0                   ; use D0 to clear memory
+memTest4a:
+    eori.b  #$4,(A6)                ; toggle debug LED
+    move.l  D0,(A0)+                ; clear next memory address
+    cmpa.l  #ramTop,A0              ; are we at top of memory yet?
+    blt     memTest4a               ; if not, then keep clearing
+
+    lea     ramBot,A0               ; start test at base of RAM
+memTest4b:
+    move.b  #$55,(A0)+              ; write test pattern bytes
+    move.b  #$AA,(A0)+              ;
+    move.b  #$11,(A0)+              ;
+    move.b  #$88,(A0)+              ;
+    eori    #$4,(A6)                ; toggle debug LED
+    cmpa.l  #ramTop,A0              ; are we at top of memory yet?
+    blt     memTest4b               ; if not, then keep writing test pattern
+
+    lea     strMemT4p1(PC),A1       ; print status update
+    prntStr
+    lea     ramBot,A0               ; set up base address for confirmation & next pattern write
+memTest4c:
+    move.l  (A0),D7                 ; check pattern at current address
+    cmp.l   #$55AA1188,D7           ; does pattern 1 match?
+    bne     memTest4err1            ; if no match, then jump to error
 memTest4err1ret:
-    move.b  #$55,(A0)+            ;write alternate pattern
-    move.b  #$AA,(A0)+            ;
-    move.b  #$55,(A0)+            ;
-    move.b  #$AA,(A0)+            ;
-    cmpa.l  #ramTop,A0        ;check for top of RAM
-    blt     memTest4c            ;and continue loop
-    movea.l #ramTop,A0        ;set up base at top of RAM
-memTest4d:    
-    move.l  -(A0),D7            ;read value
-    cmp.l   #$55AA55AA,D7        ;check read value
-    bne     memTest4err2        ;jump to error if not match
-memTest4err2ret:
-    cmpa.l  #ramBot+4,A0        ;check for bottom of RAM
-    bgt     memTest4d            ;continue loop
-    bra     memTest4end            ;jump to end of test
+    move.b  #$33,(A0)+              ; now swap things around and write the pattern again
+    move.b  #$CC,(A0)+              ;
+    move.b  #$66,(A0)+              ;
+    move.b  #$99,(A0)+              ;
+    eori.b  #$4,(A6)                ; toggle debug LED
+    cmpa.l  #ramTop,A0              ; are we at top of memory yet?
+    blt     memTest4c               ; if not, then keep checking & writing patterns
 
-memTest4err1:
-    movea.l A0,A6                ;save address
-    lea     strErr4a0(PC),A1        ;get error string header
-    prntStr                    ;and print
-    move.l  A6,D0                ;get failed RAM address
-    prntLWord                    ;and print
-    lea     strErr4a1(PC),A1        ;get error string middle
-    prntStr                    ;and print
-    move.l  D7,D0                ;get read value
-    prntLWord                    ;and print
-    lea     strCRLF(PC),A1            ;get newline
-    prntStr                    ;and print
-    movea.l A6,A0                ;restore address
-    bra     memTest4err1ret        ;continue test
-memTest4err2:
-    movea.l A0,A6                ;save address
-    lea     strErr4a0(PC),A1        ;get error string header
-    prntStr                    ;and print
-    move.l  A6,D0                ;get failed RAM address
-    prntLWord                    ;and print
-    lea     strErr4a2(PC),A1        ;get error string middle
-    prntStr                    ;and print
-    move.l  D7,D0                ;get read value
-    prntLWord                    ;and print
-    lea     strCRLF(PC),A1            ;get newline
-    prntStr                    ;and print
-    movea.l A6,A0                ;restore address
-    bra     memTest4err2ret        ;continue test
+    lea     strMemT4p2(PC),A1       ; print status update
+    prntStr
+    lea     ramTop+1,A0             ; this time, we'll check from the top down
+memTest4d:
+    eori.b  #$4,(A6)                ; toggle debug LED
+    move.l  -(A0),D7                ; check pattern at current address
+    cmp.l   #$33CC6699,D7           ; does pattern 2 match?
+    bne     memTest4err2            ; if no match, then jump to error
+memTest4err2ret:
+    cmpa.l  #ramBot+4,A0            ; are we at bottom of memory yet?
+    bgt     memTest4d               ; if not, then continue testing
+    bra     memTest4end             ; jump to end of test
+
+memTest4err1:                       ; print phase 1 error
+    movea.l A0,A6                   ; save address where error occurred
+    lea     strMemT4err1a(PC),A1    ; print error header
+    prntStr                         ;
+    move.l  A6,D0                   ; get error address
+    prntLWord                       ; and print it
+    lea     strMemT4err3(PC),A1     ; print "Expected" string
+    prntStr                         ;
+    move.l  #$55AA1188,D0           ; load expected value
+    prntLWord                       ; and print it
+    lea     strMemT4err4(PC),A1     ; print "Read" string
+    prntStr
+    move.l  D7,D0                   ; get read value
+    prntLWord                       ; and print it
+    lea     strCRLF(PC),A1          ; print newline
+    prntStr
+    movea.l A6,A0                   ; restore test address
+    bra     memTest4err1ret         ; and return to testing
+
+memTest4err2:                       ; print phase 2 error
+    movea.l A0,A6                   ; save address where error occurred
+    lea     strMemT4err2a(PC),A1    ; print error header
+    prntStr                         ;
+    move.l  A6,D0                   ; get error address
+    prntLWord                       ; and print it
+    lea     strMemT4err3(PC),A1     ; print "Expected" string
+    prntStr
+    move.l  #$33CC6699,D0           ; load expected value
+    prntLWord                       ; and print it
+    lea     strMemT4err4(PC),A1     ; print "Read" string
+    prntStr
+    move.l  D7,D0                   ; get read value
+    prntLWord                       ; and print it
+    lea     strCRLF(PC),A1          ; print newline
+    prntStr
+    movea.l A6,A0                   ; restore test address
+    bra     memTest4err2ret         ; and return to testing
 
 memTest4end:
-    lea     strTest4(PC),A1        ;get test end string
-    prntStr                    ;and print
+    lea     strTest4(PC),A1         ; get test complete string
+    prntStr                         ; and print it
+    bra     memTest5                ; jump to next test
 
+strMemT4err1a:  dc.b    'Mem Test 4p1 error at $',0
+strMemT4err2a:  dc.b    'Mem Test 4p2 error at $',0
+strMemT4err3:   dc.b    '. Expected: $',0
+strMemT4err4:   dc.b    ', Read: $',0
+strMemT4p1:     dc.b    'Mem Test 4 p1 write complete.'
+strMemT4p2:     dc.b    'Mem Test 4 p1 verify & p2 write complete.'
+    even
+
+;******************************************************************************
+; MEMORY TEST 5
+; Incrementing addresses
+;
 memTest5:
     lea     strMemTest5(PC),A1      ;print specific test header
     prntStr
@@ -757,7 +805,11 @@ memTest5err1:
 memTest5end:
     lea     strTest5(PC),A1        ;get test end string
     prntStr                    ;and print
-    
+
+;******************************************************************************
+; MEMORY TEST 6
+; Mis-aligned longwords
+;    
 memTest6:
     lea     strMemTest6(PC),A1      ;print specific test header
     prntStr
@@ -866,16 +918,16 @@ strErr2a    dc.b    '. Expected: $ffffffff, Read: $',0
 strErr3a0   dc.b    'Mem Test 3 error at $',0
 strErr3a1   dc.b    '. Expected: $',0
 strErr3a2   dc.b    ', Read: $',0
-strErr4a0   dc.b    'Mem Test 4 error at $',0
-strErr4a1   dc.b    '. Expected: $AA55AA55, Read: $',0
-strErr4a2   dc.b    '. Expected: $55AA55AA, Read: $',0
+;strErr4a0   dc.b    'Mem Test 4 error at $',0
+;strErr4a1   dc.b    '. Expected: $AA55AA55, Read: $',0
+;strErr4a2   dc.b    '. Expected: $55AA55AA, Read: $',0
 strErr5a0   dc.b    'Mem Test 5 error at $',0
 strErr6a0   dc.b    'Mem Test 6 error at $',0
 
 strMemTest1 dc.b    'Starting test 1 (Longword $0000,0000) ',CR,LF,0
 strMemTest2 dc.b    'Starting test 2 (Longword $FFFF,FFFF)',CR,LF,0
 strMemTest3 dc.b    'Starting test 3 (Longword $AAAA,AAAA & $5555,5555)',CR,LF,0
-strMemTest4 dc.b    'Starting test 4 (Walking $AA & $55 bytes)',CR,LF,0
+strMemTest4 dc.b    'Starting test 4 (Byte pattern $55,$AA,$11,$88 followed by $33,$CC,$66,$99)',CR,LF,0
 strMemTest5 dc.b    'Starting test 5 (Incrementing Addresses)',CR,LF,0
 strMemTest6 dc.b    'Starting test 6 (Mis-aligned Longwords)',CR,LF,0
 strMemTest7 dc.b    'Starting test 7',CR,LF,0

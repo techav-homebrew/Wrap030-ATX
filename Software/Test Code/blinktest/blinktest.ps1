@@ -1,0 +1,1 @@
+..\..\..\Utilities\vasm\vasmm68k_mot.exe -Fsrec -L blinktest.L68 -o blinktest.S68 -m68030 -m68882 -s37 -exec=START blinktest.x68

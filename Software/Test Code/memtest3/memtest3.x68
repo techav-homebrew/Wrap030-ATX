@@ -210,9 +210,62 @@ memTest3RowSiz:
     ; ok, this one is going to be a little harder than the column size was.
     ; the top row bit will be somewhere between A19 & A25, depending on where
     ; we ended up with the column size and how large is the row size we found.
+    ; I think we can shift D7 right by the colSize value (0-3); this will
+    ; reduce our search range to between A19 & A22, which would allow a long
+    ; if/else like we used for the colSize figuring above.
+    ; we'll be checking for $00400000, $00200000, $00100000, and all else will
+    ; set rowSize to minimum ($0)
+    move.l  D7,D4               ; start by getting a copy of the top row bit
+    lsl.l   D6,D7               ; shift top row bit by the colSize parameter
+    cmpi.l  #$00400000,D7       ;
+    beq     memTest3rowSiz11    ;
+    cmpi.l  #$00200000,D7       ;
+    beq     memTest3rowSiz10    ;
+    cmpi.l  #$00100000,D7       ;
+    beq     memTest3rowSiz01    ;
+memTest3rowSiz00:
+    moveq.l #0,D5               ; rowSize is 00
+    move.l  #$00080000,D7       ; handle else case
+    bra     memTest3setRowSiz   ;
+memTest3rowSiz01:
+    moveq.l #1,D5               ; rowSize is 01
+    bra     memTest3setRowSiz   ;
+memTest3rowSiz10:
+    moveq.l #2,D5               ; rowSize is 10
+    bra     memTest3setRowSiz   ;
+memTest3rowSiz11:
+    moveq.l #3,D5               ; rowSize is 11
 
-    ; for now, I'm just going to stop here
-    bra     memTestEnd
+memTest3setRowSiz:
+    ; now we need to configure the DRAM controller with the rowSize and colSize
+    ; parameters that we just found.
+    move.l  D4,D7               ; restore row top address
+    prntStrByName   strMemTest3row2
+    move.l  D6,D0               ; get colSize parameter
+    lsl.l   #8,D0               ; shift colSize into position
+    move.l  D5,D1               ; get rowSize parameter
+    lsl.l   #8,D1               ; shift rowSize almost there
+    lsl.l   #2,D1               ; shift rowSize into final position
+    or.l    D1,D0               ; combine rowSize & colSize into one register
+    ori.l   #dramCtrlPort,D0    ; set bits needed for addressing the DRAM
+                                ; controller registers
+    movea.l D0,A0               ; move to an address pointer
+    move.l  D0,(A0)             ; write to the settings register
+    prntStrByName   strMemTest3str2
+
+    ; shift top row address up by 1 to get the total size of SIMM 0 bank 0
+    ; this effectively sets the slot select address bit
+    ; (the next higher bit will be the bank select address bit)
+    lsl.l   #1,D7               ;
+
+    ; print the memory size we just found 
+    prntStrByName   strMemTest3str3
+    move.l  D7,D0               ;
+    prntLWord
+    prntNewLine
+
+    ; now move on to the next test
+    bra     memTest4
 
 strMemTest3start:   dc.b    "Starting memory test 3 (SIMM0 size probe)",CR,LF,0
 strMemTest3str1:    dc.b    "Mem Test 3 - Configuring DRAM controller for 12-bit ROW & 12-bit COL ... ",0
@@ -220,8 +273,53 @@ strMemTest3str2:    dc.b    " Done.",CR,LF,0
 strMemTest3col1:    dc.b    "Mem Test 3 - Found highest SIMM0 column bit: ",0
 strMemTest3col2:    dc.b    "Mem Test 3 - Configuring DRAM controller for new column size ... ",0
 strMemTest3row1:    dc.b    "Mem Test 3 - Found highest SIMM1 row bit: ",0
+strMemTest3row2:    dc.b    "Mem Test 3 - Configuring DRAM controller for new row & column sizes ... ",0
+strMemTest3done:    dc.b    "Memory test 3 complete.",CR,LF,0
+strMemTest3str3:    dc.b    "SIMM 0 Bank 0 size: ",0
     even
 
+
+;******************************************************************************
+; Fourth memory test - SIMM 0 bank check
+;
+memTest4:
+    prntStrByName   strMemTest4start
+    lea     ramBot,A0           ; get pointer to bottom of memory
+    move.l  #0,(A0)             ; clear first address
+    move.l  D7,D0               ; get copy of memory size calculated in test 3
+    lsl.l   #1,D0               ; shift high bit into bank address bit location
+    movea.l D0,A1               ; copy to pointer
+    move.l  #$55aa55aa,(A1)     ; write test pattern to lowest bank 1 address
+    cmp.l   #0,(A0)             ; check if lowest bank 0 address is still clear
+    bne     memTest4singleBank  ; if not clear, then single-bank SIMM
+memTest4dualBank:
+    ; we have a dual-bank SIMM installed
+    prntStrByName   strMemTest4dual
+    bra     memTest4end
+memTest4singleBank:
+    ; we have a single-bank SIMM installed
+    prntStrByName   strMemTest4sngl
+
+memTest4end:
+    prntStrByName   strMemTest4done
+    bra     memTest5
+
+
+strMemTest4start:   dc.b    "Starting memory test 4 (SIMM0 bank check)",CR,LF,0
+strMemTest4dual:    dc.b    "Mem Test 4 - SIMM 0 appears to be dual-bank.",CR,LF,0
+strMemTest4sngl:    dc.b    "Mem Test 4 - SIMM 0 appears to be single-bank.",CR,LF,0
+strMemTest4done:    dc.b    "Memory test 4 complete.",CR,LF,0
+
+    even
+
+;******************************************************************************
+; Fifth memory test
+;
+memTest5
+
+;******************************************************************************
+; End of program
+;
 memTestEnd:
     prntStrByName   strEnd
 endLoop:

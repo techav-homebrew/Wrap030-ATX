@@ -42,17 +42,13 @@ comBaud38k  equ  3  ;  38400
 comBaud56k  equ  2  ;  56000
 comBaud115k equ  1  ; 115200
 
-
+;******************************************************************************
 ; macros
 prntChr	MACRO
-;chrLp\@
-;    btst    #5,comRegLSR(A1)    ; check if Tx FIFO is empty
-;    beq.s   chrLp\@             ; loop until empty
+chrLp\@
+    btst    #5,comRegLSR(A1)    ; check if Tx FIFO is empty
+    beq.s   chrLp\@             ; loop until empty
     move.b  D0,comRegTX(A1)     ; transmit byte
-    move.b  #10,D0             ; set up a delay loop
-prntChrDly\@                    ; to wait for it to transmit
-    nop                         ; (we'll switch to polling later)
-    dbra    D0,prntChrDly\@
     ENDM
 
 prntStr	MACRO
@@ -66,7 +62,59 @@ prntDn\@
 	nop		; end macro
 	ENDM
 
+prntFail    MACRO
+    lea     strFailed,A4
+    prntStr
+    ENDM
 
+prntOK      MACRO
+    lea     strOK,A4
+    prntStr
+    ENDM
+
+prntNyb     MACRO
+    move.l  D0,D2               ; save a copy
+    and.b   #$F,D0              ; mask upper nybble
+    cmp.b   #9,D0               ; check if letter or number
+    bgt.s   nybLtr\@            ; letter
+    add.b   #$30,D0             ; add $30 to convert to ASCII number
+    bra.s   nybPrnt\@           ; skip ahead to print
+nybLtr\@
+    add.b   #$37,D0             ; add $37 to conver to ASCII letter
+nybPrnt\@
+    prntChr                     ; call printChr macro
+    move.l  D2,D0               ; restore copy
+    ENDM
+
+prntByte    MACRO
+    ROR.b   #4,D0               ; move upper nybble into position
+    prntNyb                     ; print upper nybble
+    ROR.b   #4,D0               ; move lower nybble into position
+    prntNyb                     ; print lower nybble
+    ENDM
+
+prntWord    MACRO
+    move.b  #8,D1               ; set up rotate length
+    ror.w   D1,D0               ; rotate upper byte into position
+    prntByte                    ; print upper byte
+    move.b  #8,D1               ; set up rotate length again
+    ror.w   D1,D0               ; rotate lower byte into position
+    prntByte                    ; print loewr byte
+    ENDM
+
+prntLong    MACRO
+    swap    D0                  ; swap upper word into position
+    prntWord                    ; print upper word
+    swap    D0                  ; swap lower word into position
+    prntWord                    ; print lower word
+    ENDM
+
+prntNewline MACRO
+    move.b  #$0d,D0             ; carriage return
+    prntChr
+    move.b  #$0a,D0             ; line feed
+    prntChr
+    ENDM
 
 ; initial vector table
 	ORG	0
@@ -111,15 +159,6 @@ initRAM:
     lea     strOK(PC),A4        ; print memory initialization ok string
     prntStr
 
-; we need to disable the startup overlay before main memory can be accessed
-disableOverlay:
-    lea     strOverlayDis(PC),A4   ; disabling Overlay string
-    prntStr
-    lea     busCtrlPort,A0      ; get address to bus controller register
-    ori.b   #1,(A0)             ; set overlay disable byte
-    lea     strOK(PC),A4        ; overlay disabled ok string
-    prntStr
-
 ; test if overlay is properly disabled
     move.l  #$a5a5a5a5,D0       ; set test pattern 
     move.l  D0,ramBot           ; write to bottom of RAM
@@ -144,6 +183,7 @@ disableOverlay:
 
 
 MAINLOOP:
+    lea     busCtrlPort,A0      ; get address to bus controller register
     eor.b   #$04,(A0)           ; invert debug LED
     move.w  #$7fff,D0           ; initialize loop
 delayLoop:
