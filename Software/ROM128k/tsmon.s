@@ -25,10 +25,31 @@
         .global startHeap
         .global _start
         .extern EXTROM
-        .extern acia1Com
-        .extern acia1Dat
-        .extern acia2Com
-        .extern acia2Dat
+|        .extern acia1Com
+|        .extern acia1Dat
+|        .extern acia2Com
+|        .extern acia2Dat
+        .extern spioPort
+        .extern spioCOM0
+        .extern spioCOM1
+        .extern spioLPT0
+        .extern comRegRX
+        .extern comRegTX
+        .extern comRegIER
+        .extern comRegIIR
+        .extern comRegFCR
+        .extern comRegLCR
+        .extern comRegMCR
+        .extern comRegLSR
+        .extern comRegMSR
+        .extern comRegSPR
+        .extern com0lsr
+        .extern com0tx
+        .extern com0mcr
+        .extern comRegDivLo
+        .extern comRegDivHi
+        .extern busCtrlPort
+        .extern dramCtrlPort
         .extern vidBase
         .extern vidBuf0
         .extern vidBuf1
@@ -69,24 +90,59 @@ VECTOR:
 | Monitor cold start initialization
 _start:
 CheckOverlay:
-        move.L #0x55AA55AA,%d0          | test pattern
-        move.L #ramBot,%a0              | get base of memory
-        move.L %d0,%a0@                 | write to first memory address
-        move.l %a0@,%d1                 | read back pattern
-        cmp.L %d1,%d0                   | check if they match
-        beq.s ClearMainMemory           | if matching, then overlay is already disabled
-ClearOverlay:
-        move.B #0,overlayPort           | disable startup overlay
+        lea     spioCOM0,%a0            | get pointer to COM0
+        initCOM %a0                     | call macro to initialize COM0
+        lea     spioCOM1,%a0            | get pointer to COM1
+        initCOM %a0                     | call macro to initialize COM1
+        debugPrint 0x0d                 | output a newline first
+        debugPrint 0x0a
+initMemController:
+        move.l  #dramCtrlPort,%d0       | get base address to DRAM register
+        ori.l   #0x0900,%d0             | configure DRAM for 11b Row, 10b Col
+        move.l  %d0,%a0                 | get pointer
+        move.l  %d0,%a0@                | write to controller
+|        move.L #0x55AA55AA,%d0          | test pattern
+|        move.L #ramBot,%a0              | get base of memory
+|        move.L %d0,%a0@                 | write to first memory address
+|        move.l %a0@,%d1                 | read back pattern
+|        cmp.L  %d1,%d0                  | check if they match
+|        beq.s  ClearMainMemory                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | if matching, then overlay is already disabled
+|ClearOverlay:
+|        move.B #0,overlayPort           | disable startup overlay
 ClearMainMemory:
-        move.l #stackTop,%a0            | start at top of memory space
-        move.l #stackTop>>2,%d0         | set up loop counter
-.clrRamLp:
-        move.l #0,%a0@-                 | zero out memory
-        dbra %d0,.clrRamLp              | loop until all is cleared
+        lea    stackTop,%a0             | get top of memory space
+        move.l %a0,%d0                  | copy to loop counter
+        lsr.l  #2,%d0                   | convert into long word count
+        swap   %d0                      | get count of 64k long word pages
+        move.w %d0,%d1                  | copy that count to D1 as page counter
+        subq.w #1,%d1                   | decrement by 1 to avoid an early bus error
+        eor.l  %d2,%d2                  | zero out D2 to use for zeroing memory
+clrRamPgLp:
+        move.w #0xffff,%d0              | use D0 as count of long words to copy
+clrRamLWlp:
+        move.l %d2,%a0@-                | zero out memory
+        dbra   %d0,clrRamLWlp           | loop until this page is cleared
+        debugPrint '.'                  | status display
+        dbra   %d1,clrRamPgLp           | loop until all pages cleared
+        debugPrint '-'                  | status indicator: memory clear complete
+
 InitRamVectors:
-        move.l #ramBot,%a0              | get bottom of RAM again
-        move.l #stackTop,%a0@(0)        | fill in initial SP again
-        move.l #_start,%a0@(4)          | and initial PC ... just in case
+        move.l #ramBot,%a0              | get bottom of RAM
+        move.l #stackTop,%a0@(0)        | fill in initial SP
+|        move.l #_start,%a0@(4)          | and initial PC ... just in case
+        move.l #COLD,%a0@(4)            | load the TSMON "COLD" subroutine into
+                                        | the initial PC restart vector at the 
+                                        | base of memory so that we only clear
+                                        | memory on initial power on
+                                        | if we reset later, skip the memory
+                                        | initialization and jump ahead to 
+                                        | restarting the monitor
+                                        | (this requires coordination with the
+                                        | main board glue logic, which should
+                                        | be made to not clear the overlay 
+                                        | register when the reset signal is
+                                        | asserted)
+        debugPrint ':'                  | status indicator: pre-monitor complete
 
 | ***************************************************************************
 | This is the main program which assembles a command in the line
@@ -129,11 +185,15 @@ WARM:
 | Some initialization and basic routines
 
 SETACIA:                                | Setup ACIA parameters
-        LEA     ACIA_1,%a0              | A0 points to console ACIA
-        MOVE.B  #0x03,%a0@              | Reset ACIA 1
-        MOVE.B  #0x03,%a0@(acia2offset) | Reset ACIA 2
-        MOVE.B  #aciaSet,%a0@           | Configure ACIA 1
-        MOVE.B  #aciaSet,%a0@(acia2offset)      | Configure ACIA 2
+|        LEA     ACIA_1,%a0              | A0 points to console ACIA
+|        MOVE.B  #0x03,%a0@              | Reset ACIA 1
+|        MOVE.B  #0x03,%a0@(acia2offset) | Reset ACIA 2
+|        MOVE.B  #aciaSet,%a0@           | Configure ACIA 1
+|        MOVE.B  #aciaSet,%a0@(acia2offset)      | Configure ACIA 2
+        lea     spioCOM0,%a0            | get pointer to COM0
+        initCOM %a0                     | call macro to initialize COM0
+        lea     spioCOM1,%a0            | get pointer to COM1
+        initCOM %a0                     | call macro to initialize COM1
         RTS
 
 NEWLINE:                                | Move cursor to start of newline
@@ -662,30 +722,23 @@ DELAY1:
 | A newline is sent to the host to "clear it down".
 
 TM:                                    | 
-        |MOVE.B #0x55,ACIA_1            | Force RTS* high to re-route data
-                                       | We're going to do this another way
-                                       | so that our default settings don't
-                                       | get changed here ...
-        MOVEM.L %d0,%a7@-
-        MOVE.B #aciaSet,%d0
-        ORI.B #0x40,%d0                  | Force RTS* high to re-route data
-        MOVE.B %d0,ACIA_1
-        MOVEM.L %a7@+,%d0
-
-        ADD.B #1,%a6@(ECHO)              | Turn off character echo
+|        MOVE.B #0x55,ACIA_1                     | Force RTS* high to re-route data
+        andi.b  #0xfd,com0mcr                   | set RTS high
+        ADD.B #1,%a6@(ECHO)                     | Turn off character echo
 TM1:
-        BSR GETCHAR                    | Get character
-        CMP.B #ESC,%d0                  | Test for end of TM mode
-        BNE TM1                        | Repeat until first escape character
-        BSR GETCHAR                    | Get second character
-        CMP.B #'E',%d0                  | If second char = E then exit TM
-        BNE TM1                        | Else continue
-        MOVE.L %a6@(CN_OVEC),%a7@-       | Save output port device name
-        MOVE.L #DCB4,%a6@(CN_OVEC)       | Get name of host port (aux port)
-        BSR NEWLINE                    | Send newline to host to clear it
-        MOVE.L %a7@+,%a6@(CN_OVEC)       | Restore output device port name
-        CLR.B %a6@(ECHO)                 | Restore echo mode
-        MOVE.B #aciaSet,ACIA_1         | Restore normal ACIA mode (RTS* low)
+        BSR GETCHAR                             | Get character
+        CMP.B #ESC,%d0                          | Test for end of TM mode
+        BNE TM1                                 | Repeat until first escape character
+        BSR GETCHAR                             | Get second character
+        CMP.B #'E',%d0                          | If second char = E then exit TM
+        BNE TM1                                 | Else continue
+        MOVE.L %a6@(CN_OVEC),%a7@-              | Save output port device name
+        MOVE.L #DCB4,%a6@(CN_OVEC)              | Get name of host port (aux port)
+        BSR NEWLINE                             | Send newline to host to clear it
+        MOVE.L %a7@+,%a6@(CN_OVEC)              | Restore output device port name
+        CLR.B %a6@(ECHO)                        | Restore echo mode
+|        MOVE.B #aciaSet,ACIA_1                  | Restore normal ACIA mode (RTS* low)
+        ori.b   #0x02,com0mcr                   | set RTS low
         RTS
 
 | ***************************************************************************
@@ -737,22 +790,41 @@ IO_REQ:
 | This is the device driver used by DCB1. Exit with input in D0
 
 CON_IN:
-        MOVEM.L %d1/%a1,%a7@-           | Save working registers
-        LEA     %a0@(12),%a1            | Get pointer to ACIA from DCB
-        MOVE.L  %a1@,%a1                | Get address of ACIA in A1
-        CLR.B   %a0@(19)                | Clear logical error in DCB
+        movem.l %d1/%a1,%a7@-           | save working registers
+        lea     %a0@(12),%a1            | get pointer to COM port from DCB
+        move.l  %a1@,%a1                | get address of COM port in A1
+        clr.b   %a0@(19)                | clear logical error in DCB
 CON_I1:
-        MOVE.B  %a1@,%d1                | Read ACIA status
-        BTST    #0,%d1                  | Test RDRF
-        BEQ     CON_I1                  | Repeat until RDRF true
-        MOVE.B  %d1,%a0@(18)            | Store physical status in DCB
-        AND.B   #0b011110100,%d1        | Mask to input error bits
-        BEQ.S   CON_I2                  | If no error then skip update
-        MOVE.B  #1,%a0@(19)             | Else update logical error
+        move.b  %a1@(comRegLSR),%d1     | read COM port status
+        btst    #0,%d1                  | test Data Ready bit
+        beq     CON_I1                  | repeat until Data Ready bit set
+        move.b  %d1,%a0@(18)            | store status bit in DCB
+        and.b   #0b10001110,%d1         | mask to highlight error bits
+        beq.s   CON_I2                  | if no error then skip update
+        move.b  #1,%a0@(19)             | else update logical error
 CON_I2:
-        MOVE.B  %a1@(aciaDatOffset),%d0 | Read input from ACIA
-        MOVEM.L %a7@+,%a1/%d1           | Restore working registers
-        RTS
+        move.b  %a1@(comRegRX),%d0      | read input from COM port
+        movem.l %a7@+,%a1/%d1           | restore working registers
+        rts
+
+| Original MC6850 ACIA data Rx function:
+|CON_IN:
+|        MOVEM.L %d1/%a1,%a7@-           | Save working registers
+|        LEA     %a0@(12),%a1            | Get pointer to ACIA from DCB
+|        MOVE.L  %a1@,%a1                | Get address of ACIA in A1
+|        CLR.B   %a0@(19)                | Clear logical error in DCB
+|CON_I1:
+|        MOVE.B  %a1@,%d1                | Read ACIA status
+|        BTST    #0,%d1                  | Test RDRF
+|        BEQ     CON_I1                  | Repeat until RDRF true
+|        MOVE.B  %d1,%a0@(18)            | Store physical status in DCB
+|       AND.B   #0b011110100,%d1        | Mask to input error bits
+|        BEQ.S   CON_I2                  | If no error then skip update
+|        MOVE.B  #1,%a0@(19)             | Else update logical error
+|CON_I2:
+|        MOVE.B  %a1@(aciaDatOffset),%d0 | Read input from ACIA
+|        MOVEM.L %a7@+,%a1/%d1           | Restore working registers
+|        RTS
 
 | ***************************************************************************
 
@@ -760,29 +832,55 @@ CON_I2:
 | The output can be halted or suspended
 
 CON_OUT:
-        MOVEM.L %a1/%d1-%d2,%a7@-       | Save working registers
-        LEA     %a0@(12),%a1            | Get pointer to ACIA from DCB
-        MOVE.L  %a1@,%a1                | Get address of ACIA in A1
-        CLR.B   %a0@(19)                | Clear logical error in DCB
+        movem.l %a1/%d1-%d2,%a7@-       | save working registers
+        lea     %a0@(12),%a1            | get poitner to COM port from DCB
+        move.l  %a1@,%a1                | get address of COM port in A1
+        clr.b   %a0@(19)                | clear logical error in DCB
 CON_OT1:
-        MOVE.B  %a1@,%d1                | Read ACIA status
-        BTST    #0,%d1                  | Test RDRF bit (any input?)
-        BEQ.S   CON_OT3                 | If no input then test output status
-        MOVE.B  %a1@(aciaDatOffset),%d2 | else read the input
-        AND.B   #0b01011111,%d2         | Strip parity and bit 5
-        CMP.B   #WAIT,%d2               | and test for a wait condition
-        BNE.S   CON_OT3                 | If not wait then ignore and test O/P
+        move.b  %a1@(comRegLSR),%d1     | read COM port status
+        btst    #0,%d1                  | test Data Ready bit (any input?)
+        beq.s   CON_OT3                 | if no input then test output status
+        move.b  %a1@(comRegRX),%d2      | else read the input
+        and.b   #0b01011111,%d2         | strip parity and bit 5
+        cmp.b   #WAIT,%d2               | and test for a wait condition
+        bne.s   CON_OT3                 | if not wait, then ignore & test O/P
 CON_OT2:
-        MOVE.B  %a1@,%d2                | Else read ACIA staus register
-        BTST    #0,%d2                  | and poll ACIA until next char received
-        BEQ     CON_OT2
+        move.b  %a1@(comRegLSR),%d2     | else read COM port status register
+        btst    #0,%d2                  | and poll COM port until next char Rx
+        beq     CON_OT2
 CON_OT3:
-        BTST    #1,%d1                  | Repeat
-        BEQ     CON_OT1                 | until ACIA Tx ready
-        MOVE.B  %d1,%a0@(18)            | Store status in DCB physical error
-        MOVE.B  %d0,%a1@(aciaDatOffset) | Transmit output
-        MOVEM.L %a7@+,%a1/%d1-%d2       | Restore working registers
-        RTS
+        btst    #5,%d1                  | check if COM port ready for TX
+        beq     CON_OT1                 | repeat until ready for TX
+        move.b  %d1,%a0@(18)            | store status in DCB physical error
+        move.b  %d0,%a1@(comRegTX)      | transmit byte
+        movem.l %a7@+,%a1/%d1-%d2       | restore working registers
+        rts
+
+| Original MC8650 ACIA data Tx function:
+|CON_OUT:
+|        MOVEM.L %a1/%d1-%d2,%a7@-       | Save working registers
+|        LEA     %a0@(12),%a1            | Get pointer to ACIA from DCB
+|        MOVE.L  %a1@,%a1                | Get address of ACIA in A1
+|        CLR.B   %a0@(19)                | Clear logical error in DCB
+|CON_OT1:
+|        MOVE.B  %a1@,%d1                | Read ACIA status
+|        BTST    #0,%d1                  | Test RDRF bit (any input?)
+|        BEQ.S   CON_OT3                 | If no input then test output status
+|        MOVE.B  %a1@(aciaDatOffset),%d2 | else read the input
+|        AND.B   #0b01011111,%d2         | Strip parity and bit 5
+|        CMP.B   #WAIT,%d2               | and test for a wait condition
+|        BNE.S   CON_OT3                 | If not wait then ignore and test O/P
+|CON_OT2:
+|        MOVE.B  %a1@,%d2                | Else read ACIA staus register
+|        BTST    #0,%d2                  | and poll ACIA until next char received
+|        BEQ     CON_OT2
+|CON_OT3:
+|        BTST    #1,%d1                  | Repeat
+|        BEQ     CON_OT1                 | until ACIA Tx ready
+|        MOVE.B  %d1,%a0@(18)            | Store status in DCB physical error
+|        MOVE.B  %d0,%a1@(aciaDatOffset) | Transmit output
+|        MOVEM.L %a7@+,%a1/%d1-%d2       | Restore working registers
+|        RTS
 
 | ***************************************************************************
 
@@ -790,22 +888,42 @@ CON_OT3:
 | CON_OUT for use with the port to the host processor
 
 AUX_IN:
-        LEA %a0@(12),%a1                  | Get pointer to aux ACIA from DCB
-        MOVE.L %a1@,%a1                 | Get address of aux ACIA
+        lea     %a0@(12),%a1            | get pointer to aux COM port from DCB
+        move.l  %a1@,%a1                | get address of aux COM port
 AUX_IN1:
-        BTST #0,%a1@                   | Test for data ready
-        BEQ AUX_IN1                    | Repeat until ready
-        MOVE.B %a1@(aciaDatOffset),%d0    | Read input
-        RTS
+        btst    #0,%a1@(comRegLSR)      | test for data ready
+        beq     AUX_IN1                 | repeat until ready
+        move.b  %a1@(comRegRX),%d0      | read input 
+        rts
 
 AUX_OUT:
-        LEA %a0@(12),%a1                  | Get pointer to aux ACIA from DCB
-        MOVE.L %a1@,%a1                 | Get address of aux ACIA
+        lea     %a0@(12),%a1            | get pointer to aux COM port from DCB
+        move.l  %a1@,%a1                | get address of aux COM port
 AUX_OT1:
-        BTST #1,%a1@                   | Test for ready to transmit
-        BEQ AUX_OT1                    | Repeat until transmitter ready
-        MOVE.B %d0,%a1@(aciaDatOffset)    | Transmit data
-        RTS
+        btst    #5,%a1@                 | test for ready to transmit
+        beq     AUX_OT1                 | repeat until TX ready
+        move.b  %d0,%a1@(comRegTX)      | transmit data
+        rts
+
+| original MC6850 functions
+
+|AUX_IN:
+|        LEA %a0@(12),%a1                  | Get pointer to aux ACIA from DCB
+|        MOVE.L %a1@,%a1                 | Get address of aux ACIA
+|AUX_IN1:
+|        BTST #0,%a1@                   | Test for data ready
+|        BEQ AUX_IN1                    | Repeat until ready
+|        MOVE.B %a1@(aciaDatOffset),%d0    | Read input
+|        RTS
+
+|AUX_OUT:
+|        LEA %a0@(12),%a1                  | Get pointer to aux ACIA from DCB
+|        MOVE.L %a1@,%a1                 | Get address of aux ACIA
+|AUX_OT1:
+|        BTST #1,%a1@                   | Test for ready to transmit
+|        BEQ AUX_OT1                    | Repeat until transmitter ready
+|        MOVE.B %d0,%a1@(aciaDatOffset)    | Transmit data
+|        RTS
 
 | ***************************************************************************
 
@@ -1339,11 +1457,22 @@ REG_MD5:
 
 | ***************************************************************************
 
-X_UN:                                  | Uninitialized exception vector routine
-        LEA %pc@(ERMES6),%a4              | Point to error message
-        BSR PSTRING                    | Display it
-        BSR EX_DIS                     | Display registers
-        BRA WARM                       | Abort
+X_UN:                                       | Uninitialized exception vector routine
+        bsr     EX_DIS                      | display register before we change any
+        LEA     %pc@(ERMES6),%a4            | Point to error message
+        BSR     PSTRING                     | Display it
+        | get the exception number from the stack frame
+        | then load the string with the name of that exception
+        eor.l   %d0,%d0                     | clear D0
+        move.w  %sp@(6),%d0                 | get vector offset from stack frame
+        andi.w  #0x0fff,%d0                 | mask off frame type from offset
+        lea     tblVecStr,%a4               | get string pointer table address
+        add.l   %d0,%a4                     | add vector offset to pointer
+        move.l  %a4@,%a4                    | get string pointer
+        bsr     PSTRING                     | print exception string
+
+|        BSR     EX_DIS                      | Display registers
+        BRA     WARM                        | Abort
 
 | ***************************************************************************
 
@@ -1451,29 +1580,55 @@ COMTAB:
 
 DCB_LST:
 DCB1:
-        .ascii "CON_IN  "                 | Device name (8 bytes)
-        DC.L CON_IN,ACIA_1             | Address of driver routine,device
-        DC.W 2                         | Number of words in parameter field
+        .ascii  "CON_IN  "              | Device name (8 bytes)
+        dc.l    CON_IN,spioCOM0         | Address of driver routine, device
+        dc.w    2                       | Number of words in parameter field
 DCB2:
-        .ascii "CON_OUT "
-        DC.L CON_OUT,ACIA_1
-        DC.W 2
+        .ascii  "CON_OUT "
+        dc.l    CON_OUT,spioCOM0
+        dc.w    2
 DCB3:
-        .ascii "AUX_IN  "
-        DC.L AUX_IN,ACIA_2
-        DC.W 2
+        .ascii  "AUX_IN  "
+        dc.l    AUX_IN,spioCOM1
+        dc.w    2
 DCB4:
-        .ascii "AUX_OUT "
-        DC.L AUX_OUT,ACIA_2
-        DC.W 2
+        .ascii  "AUX_OUT "
+        dc.l    AUX_OUT,spioCOM1
+        dc.w    2
 DCB5:
-        .ascii "BUFF_IN "
-        DC.L BUFF_IN,BUFFER
-        DC.W 2
+        .ascii  "BUFF_IN "
+        dc.l    BUFF_IN,BUFFER
+        dc.w    2
 DCB6:
-        .ascii "BUFF_OUT"
-        DC.L BUFF_OT,BUFFER
-        DC.W 2
+        .ascii  "BUFF_OUT"
+        dc.l    BUFF_OT,BUFFER
+        dc.w    2
+
+|DCB_LST:
+|DCB1:
+|        .ascii "CON_IN  "                 | Device name (8 bytes)
+|        DC.L CON_IN,ACIA_1             | Address of driver routine,device
+|        DC.W 2                         | Number of words in parameter field
+|DCB2:
+|        .ascii "CON_OUT "
+|        DC.L CON_OUT,ACIA_1
+|        DC.W 2
+|DCB3:
+|        .ascii "AUX_IN  "
+|        DC.L AUX_IN,ACIA_2
+|        DC.W 2
+|DCB4:
+|        .ascii "AUX_OUT "
+|        DC.L AUX_OUT,ACIA_2
+|        DC.W 2
+|DCB5:
+|        .ascii "BUFF_IN "
+|        DC.L BUFF_IN,BUFFER
+|        DC.W 2
+|DCB6:
+|        .ascii "BUFF_OUT"
+|        DC.L BUFF_OT,BUFFER
+|        DC.W 2
 
 | ***************************************************************************
 
@@ -1495,3 +1650,115 @@ DCB6:
 |           |-----------------------| --
 | 18+S ->   | Pointer to next DCB   |
 
+| *****************************************************************************
+| techav - 20230521
+| expanding the uninitialized exception handler to be a little more helpful by
+| giving a name to the exception that was encountered.
+
+| start with the strings of all of the exception names
+strVecGeneric:  .ascii  "Generic Interrupt\r\n\0"
+strVecZeroDiv:  .ascii  "Divide by Zero\r\n\0"
+strVecCHK:      .ascii  "CHK/CHK2 Instruction\r\n\0"
+strVecTrapV:    .ascii  "TRAP Instruction\r\n\0"
+strVecPriv:     .ascii  "Privilege Violation\r\n\0"
+strVecTrace:    .ascii  "Trace\r\n\0"
+strVecATrap:    .ascii  "$A-Line Instruction Trap\r\n\0"
+strVecFTrap:    .ascii  "$F-Line Instruction Trap\r\n\0"
+strVecCprcViol: .ascii  "Coprocessor Protocol Violation\r\n\0"
+strVecFormat:   .ascii  "Format Error\r\n\0"
+strVecUninit:   .ascii  "Uninitialized Interrupt\r\n\0"
+strVecSpur:     .ascii  "Spurious Interrupt\r\n\0"
+strVecInt1:     .ascii  "AVEC Level 1\r\n\0"
+strVecInt2:     .ascii  "AVEC Level 2\r\n\0"
+strVecInt3:     .ascii  "AVEC Level 3\r\n\0"
+strVecInt4:     .ascii  "AVEC Level 4\r\n\0"
+strVecInt5:     .ascii  "AVEC Level 5\r\n\0"
+strVecInt6:     .ascii  "AVEC Level 6\r\n\0"
+strVecInt7:     .ascii  "AVEC Level 7\r\n\0"
+strVecTrap1:    .ascii  "Trap 0 Instruction\r\n\0"
+strVecTrap2:    .ascii  "Trap 1 Instruction\r\n\0"
+strVecTrap3:    .ascii  "Trap 3 Instruction\r\n\0"
+strVecTrap4:    .ascii  "Trap 4 Instruction\r\n\0"
+strVecTrap5:    .ascii  "Trap 5 Instruction\r\n\0"
+strVecTrap6:    .ascii  "Trap 6 Instruction\r\n\0"
+strVecTrap7:    .ascii  "Trap 7 Instruction\r\n\0"
+strVecTrap8:    .ascii  "Trap 8 Instruction\r\n\0"
+strVecTrap9:    .ascii  "Trap 9 Instruction\r\n\0"
+strVecTrapA:    .ascii  "Trap 10 Instruction\r\n\0"
+strVecTrapB:    .ascii  "Trap 11 Instruction\r\n\0"
+strVecTrapC:    .ascii  "Trap 12 Instruction\r\n\0"
+strVecTrapD:    .ascii  "Trap 13 Instruction\r\n\0"
+strVecFPUunord: .ascii  "FPU Unordered Condition\r\n\0"
+strVecFPUinxct: .ascii  "FPU Inexact Result\r\n\0"
+strVecFPUdiv0:  .ascii  "FPU Divide by Zero\r\n\0"
+strVecFPUunder: .ascii  "FPU Underflow\r\n\0"
+strVecFPUopErr: .ascii  "FPU Operand Error\r\n\0"
+strVecFPUover:  .ascii  "FPU Overflow\r\n\0"
+strVecFPUnan:   .ascii  "FPU Not a Number\r\n\0"
+strVecMMUcnfg:  .ascii  "MMU Configuration Error\r\n\0"
+strVec68851:    .ascii  "MC68851 MMU Error\r\n\0"
+
+| now build a table of the string pointers for each vector
+tblVecStr:
+    dc.l    strVecGeneric   | initial stack pointer
+    dc.l    strVecGeneric   | initial program counter
+    dc.l    strVecGeneric   | bus error
+    dc.l    strVecGeneric   | address error
+    dc.l    strVecGeneric   | illegal instruction
+    dc.l    strVecZeroDiv   
+    dc.l    strVecCHK
+    dc.l    strVecTrapV
+    dc.l    strVecPriv
+    dc.l    strVecTrace
+    dc.l    strVecATrap
+    dc.l    strVecFTrap
+    dc.l    strVecGeneric
+    dc.l    strVecCprcViol
+    dc.l    strVecFormat
+    dc.l    strVecUninit
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecGeneric
+    dc.l    strVecSpur
+    dc.l    strVecInt1
+    dc.l    strVecInt2
+    dc.l    strVecInt3
+    dc.l    strVecInt4
+    dc.l    strVecInt5
+    dc.l    strVecInt6
+    dc.l    strVecInt7
+    dc.l    strVecGeneric   | Trap0 handled elsewhere
+    dc.l    strVecTrap1
+    dc.l    strVecTrap2
+    dc.l    strVecTrap3
+    dc.l    strVecTrap4
+    dc.l    strVecTrap5
+    dc.l    strVecTrap6
+    dc.l    strVecTrap7
+    dc.l    strVecTrap8
+    dc.l    strVecTrap9
+    dc.l    strVecTrapA
+    dc.l    strVecTrapB
+    dc.l    strVecTrapC
+    dc.l    strVecTrapD
+    dc.l    strVecGeneric   | Trap14 handled elsewhere
+    dc.l    strVecGeneric   | Trap15 handled elsewhere
+    dc.l    strVecFPUunord
+    dc.l    strVecFPUinxct
+    dc.l    strVecFPUdiv0
+    dc.l    strVecFPUunder
+    dc.l    strVecFPUopErr
+    dc.l    strVecFPUover
+    dc.l    strVecFPUnan
+    dc.l    strVecGeneric
+    dc.l    strVecMMUcnfg
+    dc.l    strVec68851
+    dc.l    strVec68851
+
+
+    

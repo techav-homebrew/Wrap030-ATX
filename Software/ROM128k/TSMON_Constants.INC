@@ -1,42 +1,8 @@
-
-
-
-| MEMORY MAP
-|  512kB    RAM (ROM Overlay)      0x0000,0000 - 0x0007,FFFF
-|  512kB    RAM                    0x0008,0000 - 0x000F,FFFF
-|  512kB    RAM                    0x0010,0000 - 0x0017,FFFF
-|  512kB    RAM + Video Buffer     0x0018,0000 - 0x001F,FFFF
-|  512kB    ROM (128kB, repeating) 0x0020,0000 - 0x0027,FFFF
-|  512kB    [Empty,Bus Error]      0x0028,0000 - 0x002F,FFFF
-|  512kB    Overlay Switch         0x0030,0000 - 0x0037,FFFF
-|  512kB    ACIA                   0x0038,0000 - 0x003F,FFFF
-| 1.99GB    [Repeat Above]         0x0040,0000 - 0x7FFF,FFFF
-| 2.00GB    [Expansion]            0x8000,0000 - 0xFFFF,FFFF
-
-| ROM overlay is enabled on reset and allows ROM to be read from the first page
-| RAM can still be written to on Page 0 when overlay is enabled.
-| Writing to any address on page 6 will toggle the overlay.
-| Overlay should already be disabled before TSMON is started.
-
-| ROM MAP
-|   64kB    TSMON                  0x0020,0000 - 0x0020,FFFF
-|   64kB    Enhanced BASIC         0x0021,0000 - 0x0021,FFFF
-
-
-
-|    .equ expROM, romSector1
-
-    .equ ramTop, 0x001FFFFF
-    .equ stackTop, ramTop+1
-|    .equ ramBot, 0x00000000
-
-
-
-    .equ acia2offset, 8
-    .equ aciaDatOffset, 4
+|    .equ acia2offset, 8
+|    .equ aciaDatOffset, 4
 
 |    .equ aciaSet, 0x16            | 8N1,÷64 (9600),no interrupts
-    .equ aciaSet, 0x15            | 8N1,÷16 (38400),no interrupts
+|    .equ aciaSet, 0x15            | 8N1,÷16 (38400),no interrupts
 
 
 
@@ -76,8 +42,8 @@
 
 | Device addresses
     .equ STACK, stackTop       | stack pointer
-    .equ ACIA_1, acia1Com       | console ACIA control
-    .equ ACIA_2, acia2Com       | aux ACIA control (not used)
+|    .equ ACIA_1, acia1Com       | console ACIA control
+|    .equ ACIA_2, acia2Com       | aux ACIA control (not used)
     .equ X_BASE, 0x08            | Start of exception vector table
     .equ TRAP_14, 0x4E4E          | Code for TRAP #14
     .equ MAXCHR, 64             | Length of line input buffer

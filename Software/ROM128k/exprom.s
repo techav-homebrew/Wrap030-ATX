@@ -30,35 +30,21 @@ EXTROM:
 | This is called by TSMON on startup to allow the expansion ROM to initialize
 | anything it may need to initialize on startup.
 RM2INIT:	
-    lea	    DATA,%a6	        |A6 points to RAM heap
-    lea	    UCOM,%a5	        |A5 points to User Command Table
-    move.l  %a5,%a6@(UTAB)	    |Copy User Com Table ptr
-    lea	    %pc@(sBNR),%a4      |Get pointer to banner string
+    lea	    DATA,%a6	        | A6 points to RAM heap
+    lea	    UCOM,%a5	        | A5 points to User Command Table
+    move.l  %a5,%a6@(UTAB)	    | Copy User Com Table ptr
+    lea	    %pc@(sBNR),%a4      | Get pointer to banner string
     callSYS trapPutString
     callSYS trapNewLine
 
-| Initialize video
-    lea     %pc@(sVIDstart),%a4 | get pointer to VRAM init start message
-    callSYS trapPutString       | and print it
-    lea     vidReg,%a0          |get pointer to video settings register
-    MOVE.B  #00,%a0@            |initialize video for Mode 0, buffer 0, enabled
-    lea     vidBase,%a0         |get pointer to top of VRAM
-    move.l  #0x0FFFE,%d0        |set up loop counter
-    EOR.B   %d1,%d1             |clear a register to use for clearing VRAM
-vidInitLp:
-    MOVE.B  %d1,%a0@(0,%d0.L)   |clear VRAM byte
-    MOVE.B  %d1,%a0@(0,%d0.L)   |make sure it is clear
-    DBRA    %d0,vidInitLp       |loop until complete
-
-    lea     %pc@(sVIDend),%a4   | get pointer to VRAM init end message
-    callSYS trapPutString       | and print it.
-    callSYS trapNewLine
+| Check if video installed & intialize
+|    bsr     vidInit             | initialize video
 
 | Check if FPU installed
-    BSR     ucFPUCHK
+|    BSR     ucFPUCHK
 
 | Enable L1 cache
-    BSR     ucCEnable           |enable cache by default
+    BSR     ucCEnable           | enable cache by default
 
 | Return to monitor
     lea     %pc@(sROM2end),%a4  | get final banner message pointer
@@ -95,10 +81,54 @@ UCOM:
     DC.B	0,0
 |String Constants
 sBNR:	.ascii "Initializing ROM 2\0\0"
-sVIDstart:  .ascii "Initializing Video Memory ... \0"
-sVIDend:    .ascii "Done.\0"
 sROM2end:   .ascii "ROM2 Init Complete.\0"
 
+    .even
+
+|******************************************************************************
+| VIDEO INITIALIZATION
+|******************************************************************************
+vidInit:
+    eor.b   %d0,%d0                     | clear D0
+    lea     vidReg,%a0                  | get pointer to settings register
+    move.l  0x8,%sp@-                   | save BERR vector
+    move.l  #vidVect,0x8                | load temporary BERR vector
+    move.b  %d0,%a0@                    | try applying video settings: $00
+                                        | ouput enabled, Mode 0, buffer 0
+    cmpi.b  #0,%d0                      | is D0 still clear or did we BERR?
+    bne     vidNone                     | skip video init if not installed
+    move.l  %sp@+,0x8                   | restore BERR vector
+
+| Initialize video
+    lea     %pc@(sVIDstart),%a4         | get pointer to VRAM init start message
+    callSYS trapPutString               | and print it
+    lea     vidBase,%a0                 | get pointer to top of VRAM
+    move.l  #0x0FFFE,%d0                | set up loop counter
+    EOR.B   %d1,%d1                     | clear a register to use for clearing VRAM
+vidInitLp:
+    MOVE.B  %d1,%a0@(0,%d0.L)           |clear VRAM byte
+    MOVE.B  %d1,%a0@(0,%d0.L)           |make sure it is clear
+    DBRA    %d0,vidInitLp               |loop until complete
+
+    lea     %pc@(sVIDend),%a4           | get pointer to VRAM init end message
+    callSYS trapPutString               | and print it.
+    callSYS trapNewLine
+
+    rts
+
+vidNone:
+    move.l  %sp@+,0x8                   | restore BERR vector
+    lea     %pc@(sVIDnone),%a4          | load pointer to no video string
+    callSYS trapPutString               | print string
+    rts
+
+vidVect:
+    moveq   #1,%d0                      | set no video flag
+    rte                                 | return from exception
+
+sVIDnone:   .ascii  "Video not installed.\0"
+sVIDstart:  .ascii "Initializing Video Memory ... \0"
+sVIDend:    .ascii "Done.\0"
     .even
 
 |******************************************************************************
@@ -108,30 +138,30 @@ sROM2end:   .ascii "ROM2 Init Complete.\0"
 | RETURNS:
 |   D0 - 1: FPU present| 0: FPU not present
 fpuCheck:
-    move.l  0x8,%sp@-        | save bus error vector
-    move.l  0x34,%sp@-       | save coprocessor protocol violation vector
-    move.l  #fpuVect,0x8     | load temporary vectors
-    move.l  #fpuVect,0x8
-    move.b  #1,%d0           | set flag
-    fnop                    | test an FPU instruction
-    move.l  %sp@+,0x34       | restore vectors
+    move.l  0x8,%sp@-                   | save bus error vector
+    move.l  0x34,%sp@-                  | save coprocessor protocol violation vector
+    move.l  #fpuVect,0x8                | load temporary vectors
+    move.l  #fpuVect,0x34
+    move.b  #1,%d0                      | set flag
+    fnop                                | test an FPU instruction
+    move.l  %sp@+,0x34                  | restore vectors
     move.l  %sp@+,0x8
-    rts                     | and return
+    rts                                 | and return
 fpuVect:
-    move.b  #0,%d0           | clear flag
+    move.b  #0,%d0                      | clear flag
     rte
 
 ucFPUCHK:
 | Check FPU status
-    BSR     fpuCheck        |Check if FPU is installed
-    CMP.b   #0,%d0           |Check returned flag
-    BNE     .initFPUy       |
-    lea     %pc@(sFPUn),%a4    |Get pointer to FPU not installed string
-    BRA     .initFPUmsg     |Jump ahead to print string
+    BSR     fpuCheck                    |Check if FPU is installed
+    CMP.b   #0,%d0                      |Check returned flag
+    BNE     .initFPUy                   |
+    lea     %pc@(sFPUn),%a4             |Get pointer to FPU not installed string
+    BRA     .initFPUmsg                 |Jump ahead to print string
 .initFPUy:
-    lea     %pc@(sFPUy),%a4    |Get pointer to FPU installed string
+    lea     %pc@(sFPUy),%a4             |Get pointer to FPU installed string
 .initFPUmsg:
-    callSYS trapPutString  |Print FPU status string
+    callSYS trapPutString               |Print FPU status string
     callSYS trapNewLine
     rts
 
@@ -295,9 +325,9 @@ verifyLoop:
     callSYS trapPutHexLong              | print it
     lea     %pc@(sBAS3d),%a4            | now the last header string
     callSYS trapPutString               | print it
-    move.l  %a0,%sp@+                   | restore the saved parameters
-    move.l  %d0,%sp@+
-    move.l  %a1,%sp@+
+    move.l  %sp@+,%a0                   | restore the saved parameters
+    move.l  %sp@+,%d0
+    move.l  %sp@+,%a1
 | enough printing stuff, jump to BASIC already
     jsr     %a1@                        | jump to BASIC in RAM
     MOVEM.L %a7@+,%a0-%a6/%d0-%d7       | by some miracle we have come back.

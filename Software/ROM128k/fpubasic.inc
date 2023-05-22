@@ -4,7 +4,7 @@
 | or monitor code as needed).
     .section bss,"w"
  
-ram_strt:	ds.l	0x100	| allow 1K for the stack, this should be plenty
+ram_strt:	ds.l	0x400	| allow 4K for the stack, this should be plenty
             | for any BASIC program that doesnt do something
             | silly, it could even be much less.
 ram_base:	| this gets loaded as the stack pointer
@@ -222,20 +222,6 @@ prg_strt:
 
     .ifdef  debug
 | debugging macros
-
-| print the current Program counter
-| this is expensive in terms of resources used, but helpful for debugging
-    .macro debugPrintPC
-    movem.l %a0-%a6/%d0-%d7,%sp@-       | save all registers first
-    lea     %pc@(-6),%a0                | get current PC before macro
-    move.l  %a0,%sp@-                   | and save it
-    moveq   #2,%d1                      | trap 0 call 2 for print newline
-    trap    #0                          | call the trap
-    move.l  %sp@+,%d0                   | recover the PC we saved
-    moveq   #0xb,%d1                    | trap 0 call B for print hex long
-    trap    #0                          | call the trap
-    movem.l %sp@+,%a0-%a6/%d0-%d7       | restore all registers
-    .endm
 
 | call TSMON print hex long trap for specified register
     .macro sysPutHexLong regIn

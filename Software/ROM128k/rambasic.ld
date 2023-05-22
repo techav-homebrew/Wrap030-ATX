@@ -1,3 +1,6 @@
+/* linker script for assembling BASIC to run side-loaded instead of burned 
+   to ROM and loaded into RAM from the monitor. */
+
 ramBot     = 0x00000000;
 romSector0 = 0x00200000;
 romSector1 = 0x00210000;
@@ -19,18 +22,9 @@ vidReg   = vidBase + 0xFFFF;
 overlayPort = 0x00300000;
 romTop   = 0x0021FFFF;
 
-ENTRY(_start)
+ENTRY(startBasic)
 SECTIONS {
-    .tsmon :
-    {
-        tsmon.o ( text )
-        exprom.o( text )
-    } > rom = 0xff
-    .null (NOLOAD) :
-    {
-        /* minimize what has to be written to ROM */
-    } > rom = 0xff
-    .basic 0x00210000 : /* put BASIC on the second ROM sector */
+    .text 0x2000 :
     {
         ROMBASIC = . ;
         .basicStart = . ;
@@ -40,10 +34,9 @@ SECTIONS {
     .bss 0x400 (NOLOAD) :
     {
         ramStart = . ;
-        tsmon.o( bss )
-        exprom.o( bss )
+        . = 0x000009d0 ;
         fpubasic.o( bss )
-        . = ALIGN(0x1000);
+        . = ALIGN(0x2000);
         RAMBASIC = . ;
         . += .basicEnd - .basicStart ;
         . = ALIGN(4);
@@ -51,5 +44,3 @@ SECTIONS {
         ram_addr = . ;
     } > ram
 }
-
-SIZBASIC = .basicEnd - .basicStart ;
