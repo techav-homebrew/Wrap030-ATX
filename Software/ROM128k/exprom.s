@@ -41,7 +41,7 @@ RM2INIT:
 |    bsr     vidInit             | initialize video
 
 | Check if FPU installed
-|    BSR     ucFPUCHK
+    BSR     ucFPUCHK
 
 | Enable L1 cache
     BSR     ucCEnable           | enable cache by default
@@ -140,11 +140,14 @@ sVIDend:    .ascii "Done.\0"
 fpuCheck:
     move.l  0x8,%sp@-                   | save bus error vector
     move.l  0x34,%sp@-                  | save coprocessor protocol violation vector
+|    move.l  0x2c,%sp@-                  | save f-line vector
     move.l  #fpuVect,0x8                | load temporary vectors
     move.l  #fpuVect,0x34
+|    move.l  #fpuVect,0x2c
     move.b  #1,%d0                      | set flag
     fnop                                | test an FPU instruction
-    move.l  %sp@+,0x34                  | restore vectors
+|    move.l  %sp@+,0x2c                  | restore vectors
+    move.l  %sp@+,0x34
     move.l  %sp@+,0x8
     rts                                 | and return
 fpuVect:

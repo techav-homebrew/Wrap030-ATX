@@ -18,7 +18,7 @@ module busCtrl (
     input   wire            cpuASn,         // CPU address strobe
     input   wire            cpuRWn,         // CPU read/write signal
     input   wire [1:0]      cpuSIZ,         // CPU size signals
-    output  wire [1:0]      cpuDSACKn,      // CPU async cycle acknowledge signals
+    inout   wire [1:0]      cpuDSACKn,      // CPU async cycle acknowledge signals
     input   wire            cpuSTERMn,      // CPU sync cycle acknowledge signals
     output  wire            cpuAVECn,       // CPU autovector signal
     output  wire            cpuBERRn,       // CPU bus error signal
@@ -88,13 +88,14 @@ always_comb begin
             if(!cpuASn) begin
                 if(cpuFC == 3'b111) begin
                     // CPU space 
-                    if(cpuAddrHi == 0 & cpuAddrMid == 4'h2) begin
+                    if(cpuAddrHi == 11'h7ff & cpuAddrMid == 4'hf) begin
+                        // IRQ cycle
+                        // we'll handle these with AVEC until IRQ controller is ready
+                        nextState = sAVEC;
+                    end else if(cpuAddrHi == 0 & cpuAddrMid == 4'h2) begin
                         // coprocessor access cycle
                         if(!fpuSENSEn) nextState = sFPU0;
                         else nextState = sBERR;
-                    end else if(cpuAddrHi == 11'h7ff & cpuAddrMid == 4'hf) begin
-                        // IRQ cycle
-                        nextState = sAVEC;
                     end else begin
                         // unsupported CPU space cycle
                         nextState = sBERR;
@@ -144,7 +145,7 @@ always_comb begin
         sSPI5: nextState = sSPI6;
 
         // FPU sequence
-        sFPU0: nextState = sFPU0;
+        //sFPU0: nextState = sFPU1;
 
         // vidGen sequence
         sVID0: nextState = sVID1;
@@ -156,7 +157,7 @@ always_comb begin
         sISA0: nextState = sISA1;
 
         // cycle end states for each sequence that can time out
-        sDRAM, sFPU1, sVID1, sKBD1, sISA1, sEXT: begin
+        sDRAM, sFPU0, sVID1, sKBD1, sISA1, sEXT: begin
             if(cpuASn) begin
                 nextState = sIDLE;
             end else if(berrTimer == 0) begin
@@ -171,6 +172,8 @@ always_comb begin
             if(cpuASn) nextState = sIDLE;
             else nextState = timingState;
         end
+
+        default: nextState <= sIDLE;
     endcase
 end
 
@@ -244,8 +247,9 @@ always @(posedge sysClk, negedge sysRESETn) begin
                 cpuDSACKn <= 2'b11;
                 cpuAVECn <= 1'b0;
             end
-            sFPU1, sEXT: begin
-                cpuDSACKn <= sysACKn;
+            sEXT: begin
+                cpuDSACKn[0] <= sysACKn[0];
+                cpuDSACKn[1] <= sysACKn[1];
                 cpuAVECn <= 1'b1;
             end
             sISA1: begin
@@ -253,8 +257,16 @@ always @(posedge sysClk, negedge sysRESETn) begin
                 cpuDSACKn[0] <= isaACK8n;
                 cpuAVECn <= 1'b1;
             end
-            default: begin
+            sFPU0: begin
+                cpuDSACKn <= 2'bZZ;
+                cpuAVECn <= 1'b1;
+            end
+            sIDLE: begin
                 cpuDSACKn <= 2'b11;
+                cpuAVECn <= 1'b1;
+            end
+            default: begin
+                cpuDSACKn <= 2'bZZ;
                 cpuAVECn <= 1'b1;
             end
         endcase

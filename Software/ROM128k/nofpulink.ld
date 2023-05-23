@@ -1,5 +1,5 @@
 ramBot     = 0x00000000;
-ramTop     = 0x007FFFFF;    /* 8MB */
+ramTop     = 0x00FFFFFF;    /* 16MB */
 stackTop   = ramTop + 1;
 romSector0 = 0xF0000000;
 romSector1 = 0xF0010000;
