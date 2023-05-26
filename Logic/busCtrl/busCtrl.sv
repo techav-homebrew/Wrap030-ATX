@@ -191,10 +191,11 @@ always @(negedge sysClk, negedge sysRESETn) begin
 end
 
 // load data into settings registers during sREGW state
+// regPower should be latched high to keep an ATX power supply running
 always @(negedge sysClk, negedge sysRESETn) begin
     if(!sysRESETn) begin
         // regOverlay <= 0;
-        regPower <= 0;
+        regPower <= 1;
         regGPIO <= 0;
     end else begin
         if(timingState == sREGW) begin
@@ -206,10 +207,11 @@ always @(negedge sysClk, negedge sysRESETn) begin
 end
 
 // automatically disable overlay on 8th ROM access cycle
-// ... I think this will work?
+// this function is reset by the system power-ok signal so that the overlay is
+// only enabled during cold boot and not a warm reset
 reg [2:0] overlayCycleCount;
-always @(negedge romCEn, negedge sysRESETn) begin
-    if(!sysRESETn) begin
+always @(negedge romCEn, negedge sysPWROKn) begin
+    if(!sysPWROKn) begin
         regOverlay <= 0;
         overlayCycleCount <= 0;
     end else begin
