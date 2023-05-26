@@ -89,6 +89,9 @@ VECTOR:
 
 | Monitor cold start initialization
 _start:
+SoftPowerOn:
+        move.b  #0x7,busCtrlPort        | disable overlay, enable soft power,
+                                        | enable GP LED
 CheckOverlay:
         lea     spioCOM0,%a0            | get pointer to COM0
         initCOM %a0                     | call macro to initialize COM0

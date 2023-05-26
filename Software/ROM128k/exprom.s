@@ -41,7 +41,7 @@ RM2INIT:
 |    bsr     vidInit             | initialize video
 
 | Check if FPU installed
-    BSR     ucFPUCHK
+|    BSR     ucFPUCHK
 
 | Enable L1 cache
     BSR     ucCEnable           | enable cache by default
@@ -78,6 +78,9 @@ UCOM:
     dc.B    4,4
     .ascii "BOOT"
     dc.L    ucBOOT
+    dc.b    8,8
+    .ascii  "SHUTDOWN"
+    dc.l    ucSHUTDOWN
     DC.B	0,0
 |String Constants
 sBNR:	.ascii "Initializing ROM 2\0\0"
@@ -140,13 +143,10 @@ sVIDend:    .ascii "Done.\0"
 fpuCheck:
     move.l  0x8,%sp@-                   | save bus error vector
     move.l  0x34,%sp@-                  | save coprocessor protocol violation vector
-|    move.l  0x2c,%sp@-                  | save f-line vector
     move.l  #fpuVect,0x8                | load temporary vectors
     move.l  #fpuVect,0x34
-|    move.l  #fpuVect,0x2c
     move.b  #1,%d0                      | set flag
     fnop                                | test an FPU instruction
-|    move.l  %sp@+,0x2c                  | restore vectors
     move.l  %sp@+,0x34
     move.l  %sp@+,0x8
     rts                                 | and return
@@ -213,6 +213,7 @@ sHELP2:
     .ascii "SECTor <ADDRESS>               - Print disk sector contents\r\n"
     .ascii "FPUchk                         - Check if FPU is installed\r\n"
     .ascii "BOOT                           - Execute boot block from disk\r\n"
+    .ascii "SHUTDOWN                       - Power off ATX power supply\r\n"
     DC.B	0,0
 
     .even
@@ -403,6 +404,26 @@ sCDIS:
     .ascii "CPU L1 Cache Disabled.\0\0"
 
     .even
+
+|******************************************************************************
+| System Power Off
+|******************************************************************************
+ucSHUTDOWN:
+    move.b  #0,busCtrlPort              | clear bus controller register
+                                        | this will float the ATX PWRON signal
+                                        | allowing the power supply to turn off
+    move.w  #0x7fff,%d0                 | set up a delay loop
+offDELAYLP:
+    dbra    %d0,offDELAYLP              | run delay loop
+    lea     %pc@(sSYSNOTATX),%a4        | get shutdown string
+    callSYS trapPutString
+offFINALLOOP:
+    bra     offFINALLOOP
+
+sSYSNOTATX:
+    .ascii  "It's now safe to turn off your computer.\r\n\0"
+    .even
+
 
 |******************************************************************************
 | IDE+FAT DISK FUNCTIONS
