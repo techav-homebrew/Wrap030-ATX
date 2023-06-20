@@ -52,6 +52,8 @@ SECTIONS {
     {
         tsmon.o ( text )
         exprom.o( text )
+        . = ALIGN(0x1000);
+        namewriter.o( text )
     } > rom = 0xff
     .null (NOLOAD) :
     {
@@ -70,6 +72,7 @@ SECTIONS {
         tsmon.o( bss )
         exprom.o( bss )
         ehbasic.o( bss )
+        namewriter.o( bss )
         . = ALIGN(0x1000);
         RAMBASIC = . ;
         . += .basicEnd - .basicStart ;

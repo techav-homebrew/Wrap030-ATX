@@ -16,8 +16,8 @@ acia2Com = acia1Com + 8;
 acia2Dat = acia2Com + 4; */
 spioPort = 0xDC000000;
 spioCOM0 = spioPort + 0x00;
-spioCOM1 = spioPort + 0x40;
-spioLPT0 = spioPort + 0x80;
+spioCOM1 = spioPort + 0x80;
+spioLPT0 = spioPort + 0x40;
 
 comRegRX    = (0*8); /* Receive Buffer Register (read only) (Requires LCR DLAB clear) */
 comRegTX    = (0*8); /* Transmit Holding Register (write only) (Requires LCR DLAB clear) */
